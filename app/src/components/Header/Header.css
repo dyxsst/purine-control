@@ -1,0 +1,39 @@
+.header {
+  background: var(--color-surface);
+  padding: var(--space-md);
+  border-radius: var(--radius-lg);
+  margin-bottom: var(--space-md);
+  box-shadow: var(--shadow-sm);
+}
+
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.header-title-group {
+  flex: 1;
+}
+
+.header-title {
+  font-size: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.header-dragon {
+  font-size: 1.75rem;
+}
+
+.header-subtitle {
+  color: var(--color-text-secondary);
+  font-size: 0.875rem;
+  margin-top: var(--space-xs);
+  margin-bottom: 0;
+}
+
+.header-action {
+  margin-left: var(--space-md);
+}

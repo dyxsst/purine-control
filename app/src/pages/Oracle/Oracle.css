@@ -1,0 +1,30 @@
+.oracle-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.coming-soon {
+  text-align: center;
+  padding: var(--space-xl);
+}
+
+.coming-soon h2 {
+  margin-bottom: var(--space-md);
+}
+
+.feature-list {
+  list-style: none;
+  text-align: left;
+  max-width: 300px;
+  margin: var(--space-lg) auto 0;
+}
+
+.feature-list li {
+  padding: var(--space-sm) 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.feature-list li:last-child {
+  border-bottom: none;
+}

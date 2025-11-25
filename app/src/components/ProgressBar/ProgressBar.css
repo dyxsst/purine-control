@@ -1,0 +1,83 @@
+.nutrient-progress {
+  margin-bottom: var(--space-md);
+}
+
+.nutrient-progress.compact {
+  margin-bottom: var(--space-sm);
+}
+
+.nutrient-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-xs);
+}
+
+.nutrient-label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  font-weight: 600;
+}
+
+.nutrient-icon {
+  font-size: 1.125rem;
+}
+
+.nutrient-name {
+  color: var(--color-text);
+}
+
+.nutrient-value {
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+}
+
+.nutrient-value .current {
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+.nutrient-value .separator {
+  margin: 0 2px;
+}
+
+.nutrient-value .unit {
+  margin-left: 2px;
+  font-size: 0.75rem;
+}
+
+.nutrient-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: var(--space-xs);
+  font-size: 0.75rem;
+}
+
+.status-indicator {
+  font-size: 0.875rem;
+}
+
+.status-indicator.success { color: var(--color-success); }
+.status-indicator.warning { color: var(--color-warning); }
+.status-indicator.danger { color: var(--color-danger); }
+
+.percentage {
+  color: var(--color-text-secondary);
+  font-family: var(--font-mono);
+}
+
+/* Compact mode */
+.nutrient-progress.compact .nutrient-header {
+  margin-bottom: 2px;
+}
+
+.nutrient-progress.compact .nutrient-value {
+  font-size: 0.75rem;
+}
+
+.nutrient-progress.compact .progress-bar {
+  height: 8px;
+}

@@ -1,0 +1,225 @@
+.settings-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.settings-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.section-title {
+  font-size: 1.125rem;
+  margin: 0 0 var(--space-sm) 0;
+  padding-bottom: var(--space-sm);
+  border-bottom: 2px solid var(--color-border);
+}
+
+/* Form Styles */
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.form-group label {
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-md);
+}
+
+.checkbox-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: var(--space-xs) var(--space-sm);
+  background: var(--color-surface-variant);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 0.875rem;
+  text-transform: capitalize;
+}
+
+.checkbox-label input {
+  width: auto;
+}
+
+/* Thresholds */
+.threshold-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-sm) 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.threshold-row:last-of-type {
+  border-bottom: none;
+}
+
+.threshold-label {
+  font-weight: 500;
+}
+
+.threshold-value {
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+}
+
+/* Theme Section */
+.theme-presets {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-sm);
+}
+
+.theme-preset {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: var(--space-md);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.theme-preset:hover {
+  border-color: var(--color-primary);
+}
+
+.theme-preset.active {
+  border-color: var(--color-primary);
+  background: var(--color-surface-variant);
+}
+
+.preset-swatch {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-full);
+  border: 2px solid white;
+  box-shadow: var(--shadow-sm);
+}
+
+.preset-name {
+  font-weight: 600;
+  font-size: 0.75rem;
+  text-align: center;
+}
+
+.preset-desc {
+  font-size: 0.625rem;
+  color: var(--color-text-secondary);
+  text-align: center;
+}
+
+.custom-color-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  margin-top: var(--space-md);
+}
+
+.custom-color-section label {
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+.color-picker-row {
+  display: flex;
+  gap: var(--space-sm);
+  align-items: center;
+}
+
+.color-picker {
+  width: 50px;
+  height: 40px;
+  padding: 0;
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.color-input {
+  flex: 1;
+  font-family: var(--font-mono);
+}
+
+/* Theme Preview */
+.theme-preview {
+  margin-top: var(--space-md);
+  padding: var(--space-md);
+  border: 2px dashed var(--color-border);
+}
+
+.preview-label {
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+  margin-bottom: var(--space-sm);
+}
+
+.preview-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  align-items: flex-start;
+}
+
+.preview-text {
+  color: var(--color-text);
+}
+
+/* Stats Grid */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-md);
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--space-md);
+  background: var(--color-surface-variant);
+  border-radius: var(--radius-md);
+}
+
+.stat-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--color-primary);
+}
+
+.stat-label {
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+}
+
+/* Mobile adjustments */
+@media (max-width: 400px) {
+  .theme-presets {
+    grid-template-columns: 1fr;
+  }
+  
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+}
