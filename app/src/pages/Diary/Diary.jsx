@@ -2,36 +2,10 @@ import { useState } from 'react';
 import Header from '../../components/Header/Header';
 import NutrientProgress from '../../components/ProgressBar/ProgressBar';
 import EmberMascot, { getEmberState } from '../../components/EmberMascot/EmberMascot';
-import { DEFAULT_THRESHOLDS, getToday } from '../../lib/nutrition';
+import { useUser } from '../../contexts/UserContext';
+import { useMeals, useHydration } from '../../hooks/useData';
+import { getToday } from '../../lib/nutrition';
 import './Diary.css';
-
-// Demo data for initial display
-const DEMO_MEALS = [
-  {
-    id: '1',
-    meal_type: 'breakfast',
-    meal_name: 'Dragon Berry Oatmeal',
-    ingredients: [
-      { name: 'Oats', quantity: 50, unit: 'g' },
-      { name: 'Blueberries', quantity: 30, unit: 'g' },
-      { name: 'Honey', quantity: 15, unit: 'g' },
-    ],
-    total_nutrients: { calories: 285, purines: 25, protein: 8, carbs: 52, fat: 5, fiber: 6, sodium: 5, sugar: 18 },
-    hydration_ml: 0,
-  },
-  {
-    id: '2',
-    meal_type: 'lunch',
-    meal_name: 'Fire-Grilled Chicken Bowl',
-    ingredients: [
-      { name: 'Chicken breast', quantity: 150, unit: 'g' },
-      { name: 'Brown rice', quantity: 100, unit: 'g' },
-      { name: 'Broccoli', quantity: 80, unit: 'g' },
-    ],
-    total_nutrients: { calories: 420, purines: 145, protein: 42, carbs: 38, fat: 8, fiber: 5, sodium: 95, sugar: 3 },
-    hydration_ml: 0,
-  },
-];
 
 const MEAL_TYPES = [
   { key: 'breakfast', icon: '🍳', label: 'Brekkie' },
@@ -64,30 +38,33 @@ const getCalendarDays = (centerDate) => {
 };
 
 export default function Diary() {
+  const { user, isLoading: userLoading } = useUser();
   const [selectedDate, setSelectedDate] = useState(getToday());
   const [calendarCenter, setCalendarCenter] = useState(new Date());
   const [selectedMealType, setSelectedMealType] = useState('breakfast');
   const [mealInput, setMealInput] = useState('');
-  const [meals] = useState(DEMO_MEALS);
-  const [hydration, setHydration] = useState(1250);
   const [showAllNutrients, setShowAllNutrients] = useState(false);
   
+  // Use real data hooks
+  const { meals, isLoading: mealsLoading, addMeal, deleteMeal, getDailyTotals } = useMeals(selectedDate);
+  const { totalHydration, adjustHydration, isLoading: hydrationLoading } = useHydration(selectedDate);
+  
   const calendarDays = getCalendarDays(calendarCenter);
+  const thresholds = user?.thresholds || {};
   
-  const thresholds = DEFAULT_THRESHOLDS;
+  // Filter out hydration entries from meals display
+  const displayMeals = meals.filter(m => m.meal_type !== 'hydration');
   
-  // Calculate daily totals
-  const totals = meals.reduce((acc, meal) => {
-    Object.keys(meal.total_nutrients).forEach(key => {
-      acc[key] = (acc[key] || 0) + meal.total_nutrients[key];
-    });
-    return acc;
-  }, { hydration });
+  // Calculate daily totals including hydration
+  const mealTotals = getDailyTotals(selectedDate);
+  const totals = { ...mealTotals, hydration: totalHydration };
   
   const emberState = getEmberState(totals, thresholds);
   
-  const adjustHydration = (amount) => {
-    setHydration(prev => Math.max(0, prev + amount));
+  const isLoading = userLoading || mealsLoading || hydrationLoading;
+  
+  const handleAdjustHydration = async (amount) => {
+    await adjustHydration(amount);
   };
   
   const handleDayClick = (dateKey) => {
@@ -100,13 +77,30 @@ export default function Diary() {
     setCalendarCenter(newCenter);
   };
   
-  const handleLogMeal = (e) => {
+  const handleLogMeal = async (e) => {
     e.preventDefault();
     if (!mealInput.trim()) return;
     
+    // For now, create a simple meal entry (AI parsing will come later)
     // TODO: Integrate with AI for parsing
-    alert(`Would analyze: "${mealInput}" for ${selectedMealType}`);
+    const newMeal = {
+      date: selectedDate,
+      meal_type: selectedMealType,
+      meal_name: mealInput,
+      ingredients: [],
+      total_nutrients: { calories: 0, purines: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, sodium: 0, sugar: 0 },
+      hydration_ml: 0,
+      analysis_method: 'manual',
+    };
+    
+    await addMeal(newMeal);
     setMealInput('');
+  };
+  
+  const handleDeleteMeal = async (mealId) => {
+    if (confirm('Delete this meal?')) {
+      await deleteMeal(mealId);
+    }
   };
   
   // Parse YYYY-MM-DD string to local date for display
@@ -120,6 +114,18 @@ export default function Diary() {
     month: 'short', 
     day: 'numeric' 
   });
+  
+  if (isLoading) {
+    return (
+      <div className="page diary-page">
+        <Header title="Dragon Keeper" subtitle="Loading..." />
+        <div className="loading-state card">
+          <div className="spinner"></div>
+          <p>Waking up the dragon...</p>
+        </div>
+      </div>
+    );
+  }
   
   return (
     <div className="page diary-page">
@@ -187,19 +193,19 @@ export default function Diary() {
       <div className="hydration-section card">
         <div className="hydration-header">
           <span className="hydration-title">💧 Dragon's Hydration</span>
-          <span className="hydration-value">{hydration}/{thresholds.hydration_target}ml</span>
+          <span className="hydration-value">{totalHydration}/{thresholds.hydration_target || 2000}ml</span>
         </div>
         <div className="progress-bar">
           <div 
-            className={`progress-bar-fill ${hydration >= thresholds.hydration_target ? 'success' : 'warning'}`}
-            style={{ width: `${Math.min((hydration / thresholds.hydration_target) * 100, 100)}%` }}
+            className={`progress-bar-fill ${totalHydration >= (thresholds.hydration_target || 2000) ? 'success' : 'warning'}`}
+            style={{ width: `${Math.min((totalHydration / (thresholds.hydration_target || 2000)) * 100, 100)}%` }}
           />
         </div>
         <div className="hydration-buttons">
-          <button className="btn btn-secondary btn-danger-outline" onClick={() => adjustHydration(-250)}>−250</button>
-          <button className="btn btn-secondary" onClick={() => adjustHydration(250)}>+250</button>
-          <button className="btn btn-secondary" onClick={() => adjustHydration(500)}>+500</button>
-          <button className="btn btn-secondary" onClick={() => adjustHydration(750)}>🏆+750</button>
+          <button className="btn btn-secondary btn-danger-outline" onClick={() => handleAdjustHydration(-250)}>−250</button>
+          <button className="btn btn-secondary" onClick={() => handleAdjustHydration(250)}>+250</button>
+          <button className="btn btn-secondary" onClick={() => handleAdjustHydration(500)}>+500</button>
+          <button className="btn btn-secondary" onClick={() => handleAdjustHydration(750)}>🏆+750</button>
         </div>
       </div>
       
@@ -207,7 +213,7 @@ export default function Diary() {
       <section className="meals-section">
         <h2 className="section-title">Today's Feast</h2>
         
-        {meals.length === 0 ? (
+        {displayMeals.length === 0 ? (
           <div className="empty-state card">
             <EmberMascot state="curious" />
             <p>No meals logged yet today!</p>
@@ -215,7 +221,7 @@ export default function Diary() {
           </div>
         ) : (
           <div className="meals-list">
-            {meals.map(meal => (
+            {displayMeals.map(meal => (
               <div key={meal.id} className="meal-card card">
                 <div className="meal-header">
                   <span className="meal-type-badge">
@@ -223,18 +229,20 @@ export default function Diary() {
                   </span>
                   <h3 className="meal-name">{meal.meal_name}</h3>
                 </div>
-                <ul className="meal-ingredients">
-                  {meal.ingredients.map((ing, i) => (
-                    <li key={i}>• {ing.name} ({ing.quantity}{ing.unit})</li>
-                  ))}
-                </ul>
+                {meal.ingredients && meal.ingredients.length > 0 && (
+                  <ul className="meal-ingredients">
+                    {meal.ingredients.map((ing, i) => (
+                      <li key={i}>• {ing.name} ({ing.quantity}{ing.unit})</li>
+                    ))}
+                  </ul>
+                )}
                 <div className="meal-nutrients">
-                  <span>🔥 {meal.total_nutrients.calories} cal</span>
-                  <span>🧬 {meal.total_nutrients.purines}mg purines</span>
+                  <span>🔥 {meal.total_nutrients?.calories || 0} cal</span>
+                  <span>🧬 {meal.total_nutrients?.purines || 0}mg purines</span>
                 </div>
                 <div className="meal-actions">
                   <button className="btn btn-secondary">✏️ Edit</button>
-                  <button className="btn btn-secondary">🗑️</button>
+                  <button className="btn btn-secondary" onClick={() => handleDeleteMeal(meal.id)}>🗑️</button>
                   <button className="btn btn-secondary">📚 Stash</button>
                 </div>
               </div>
@@ -254,27 +262,27 @@ export default function Diary() {
         <NutrientProgress 
           nutrient="calories" 
           value={totals.calories || 0} 
-          target={thresholds.calories_max}
-          min={thresholds.calories_min}
-          max={thresholds.calories_max}
+          target={thresholds.calories_max || 2000}
+          min={thresholds.calories_min || 1500}
+          max={thresholds.calories_max || 2000}
         />
         
         <NutrientProgress 
           nutrient="purines" 
           value={totals.purines || 0} 
-          target={thresholds.purines_max}
-          max={thresholds.purines_max}
+          target={thresholds.purines_max || 400}
+          max={thresholds.purines_max || 400}
         />
         
         {showAllNutrients && (
           <div className="all-nutrients animate-fade-in">
-            <NutrientProgress nutrient="protein" value={totals.protein || 0} target={thresholds.protein_target} compact />
-            <NutrientProgress nutrient="carbs" value={totals.carbs || 0} target={thresholds.carbs_target} compact />
-            <NutrientProgress nutrient="fat" value={totals.fat || 0} target={thresholds.fat_target} compact />
-            <NutrientProgress nutrient="fiber" value={totals.fiber || 0} target={thresholds.fiber_target} compact />
-            <NutrientProgress nutrient="sodium" value={totals.sodium || 0} target={thresholds.sodium_max} max={thresholds.sodium_max} compact />
-            <NutrientProgress nutrient="sugar" value={totals.sugar || 0} target={thresholds.sugar_max} max={thresholds.sugar_max} compact />
-            <NutrientProgress nutrient="hydration" value={hydration} target={thresholds.hydration_target} compact />
+            <NutrientProgress nutrient="protein" value={totals.protein || 0} target={thresholds.protein_target || 60} compact />
+            <NutrientProgress nutrient="carbs" value={totals.carbs || 0} target={thresholds.carbs_target || 250} compact />
+            <NutrientProgress nutrient="fat" value={totals.fat || 0} target={thresholds.fat_target || 65} compact />
+            <NutrientProgress nutrient="fiber" value={totals.fiber || 0} target={thresholds.fiber_target || 30} compact />
+            <NutrientProgress nutrient="sodium" value={totals.sodium || 0} target={thresholds.sodium_max || 2300} max={thresholds.sodium_max || 2300} compact />
+            <NutrientProgress nutrient="sugar" value={totals.sugar || 0} target={thresholds.sugar_max || 50} max={thresholds.sugar_max || 50} compact />
+            <NutrientProgress nutrient="hydration" value={totalHydration} target={thresholds.hydration_target || 2000} compact />
           </div>
         )}
       </section>

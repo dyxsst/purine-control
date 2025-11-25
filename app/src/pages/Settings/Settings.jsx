@@ -1,12 +1,18 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '../../components/Header/Header';
+import { useUser } from '../../contexts/UserContext';
+import { useStash } from '../../hooks/useData';
 import { THEME_PRESETS, generateThemeFromSeed, applyTheme } from '../../lib/theme';
 import { DEFAULT_THRESHOLDS, calculateAllThresholds } from '../../lib/nutrition';
 import './Settings.css';
 
 export default function Settings() {
   const navigate = useNavigate();
+  const { user, isLoading, updateProfile, updateThresholds, updateTheme, saveUser } = useUser();
+  const { savedMeals, customIngredients } = useStash();
+  
+  // Local state for editing (synced from user context)
   const [profile, setProfile] = useState({
     name: 'Dragon Keeper',
     sex: 'male',
@@ -21,30 +27,72 @@ export default function Settings() {
   const [selectedTheme, setSelectedTheme] = useState('emerald');
   const [customColor, setCustomColor] = useState('#66BB6A');
   const [showThresholdEditor, setShowThresholdEditor] = useState(false);
+  const [hasChanges, setHasChanges] = useState(false);
+  
+  // Sync local state from user context
+  useEffect(() => {
+    if (user) {
+      setProfile({
+        name: user.name || 'Dragon Keeper',
+        ...user.profile,
+      });
+      setThresholds(user.thresholds || DEFAULT_THRESHOLDS);
+      setSelectedTheme(user.theme?.preset || 'emerald');
+      setCustomColor(user.theme?.seed_color_hex || '#66BB6A');
+    }
+  }, [user]);
   
   const handleCalculateNeeds = () => {
     const calculated = calculateAllThresholds(profile);
     setThresholds(calculated);
-    alert("Dragon's needs calculated! 🐉✨");
+    setHasChanges(true);
   };
   
   const updateThreshold = (key, value) => {
     setThresholds(prev => ({ ...prev, [key]: Number(value) }));
+    setHasChanges(true);
   };
   
-  const handleThemeChange = (presetKey) => {
+  const handleProfileChange = (updates) => {
+    setProfile(prev => ({ ...prev, ...updates }));
+    setHasChanges(true);
+  };
+  
+  const handleThemeChange = async (presetKey) => {
     setSelectedTheme(presetKey);
     const preset = THEME_PRESETS[presetKey];
     const theme = generateThemeFromSeed(preset.seedColor, preset.isDark);
     applyTheme(theme);
+    await updateTheme(presetKey, preset.seedColor);
   };
   
-  const handleCustomColor = (color) => {
+  const handleCustomColor = async (color) => {
     setCustomColor(color);
     setSelectedTheme('custom');
     const theme = generateThemeFromSeed(color, false);
     applyTheme(theme);
+    await updateTheme('custom', color);
   };
+  
+  const handleSaveChanges = async () => {
+    await updateProfile(profile);
+    await updateThresholds(thresholds);
+    await saveUser();
+    setHasChanges(false);
+    alert("Dragon's settings saved! 🐉✨");
+  };
+  
+  if (isLoading) {
+    return (
+      <div className="page settings-page">
+        <Header title="Dragon's Lair" subtitle="Loading..." />
+        <div className="loading-state card">
+          <div className="spinner"></div>
+          <p>Opening the lair...</p>
+        </div>
+      </div>
+    );
+  }
   
   return (
     <div className="page settings-page">
@@ -62,7 +110,7 @@ export default function Settings() {
           <input 
             type="text" 
             value={profile.name}
-            onChange={(e) => setProfile({...profile, name: e.target.value})}
+            onChange={(e) => handleProfileChange({ name: e.target.value })}
           />
         </div>
         
@@ -71,7 +119,7 @@ export default function Settings() {
             <label>Sex</label>
             <select 
               value={profile.sex}
-              onChange={(e) => setProfile({...profile, sex: e.target.value})}
+              onChange={(e) => handleProfileChange({ sex: e.target.value })}
             >
               <option value="male">Male</option>
               <option value="female">Female</option>
@@ -84,7 +132,7 @@ export default function Settings() {
             <input 
               type="number" 
               value={profile.age}
-              onChange={(e) => setProfile({...profile, age: parseInt(e.target.value)})}
+              onChange={(e) => handleProfileChange({ age: parseInt(e.target.value) })}
             />
           </div>
         </div>
@@ -95,7 +143,7 @@ export default function Settings() {
             <input 
               type="number" 
               value={profile.weight_kg}
-              onChange={(e) => setProfile({...profile, weight_kg: parseInt(e.target.value)})}
+              onChange={(e) => handleProfileChange({ weight_kg: parseInt(e.target.value) })}
             />
           </div>
           
@@ -104,7 +152,7 @@ export default function Settings() {
             <input 
               type="number" 
               value={profile.height_cm}
-              onChange={(e) => setProfile({...profile, height_cm: parseInt(e.target.value)})}
+              onChange={(e) => handleProfileChange({ height_cm: parseInt(e.target.value) })}
             />
           </div>
         </div>
@@ -113,7 +161,7 @@ export default function Settings() {
           <label>Activity Level</label>
           <select 
             value={profile.activity_level}
-            onChange={(e) => setProfile({...profile, activity_level: e.target.value})}
+            onChange={(e) => handleProfileChange({ activity_level: e.target.value })}
           >
             <option value="sedentary">Sedentary (little exercise)</option>
             <option value="light">Light (1-3 days/week)</option>
@@ -130,12 +178,12 @@ export default function Settings() {
               <label key={condition} className="checkbox-label">
                 <input 
                   type="checkbox"
-                  checked={profile.dietary_conditions.includes(condition)}
+                  checked={profile.dietary_conditions?.includes(condition) || false}
                   onChange={(e) => {
                     const conditions = e.target.checked
-                      ? [...profile.dietary_conditions, condition]
-                      : profile.dietary_conditions.filter(c => c !== condition);
-                    setProfile({...profile, dietary_conditions: conditions});
+                      ? [...(profile.dietary_conditions || []), condition]
+                      : (profile.dietary_conditions || []).filter(c => c !== condition);
+                    handleProfileChange({ dietary_conditions: conditions });
                   }}
                 />
                 <span>{condition.replace('_', ' ')}</span>
@@ -147,6 +195,12 @@ export default function Settings() {
         <button className="btn btn-primary w-full" onClick={handleCalculateNeeds}>
           Calculate Dragon's Needs 🔮
         </button>
+        
+        {hasChanges && (
+          <button className="btn btn-primary w-full mt-sm" onClick={handleSaveChanges}>
+            💾 Save All Changes
+          </button>
+        )}
       </section>
       
       {/* Stash Management */}
@@ -155,10 +209,10 @@ export default function Settings() {
         <p className="text-muted">Manage your saved meals and custom ingredients.</p>
         <div className="stash-buttons">
           <button className="btn btn-secondary" onClick={() => navigate('/stash')}>
-            📖 Saved Meals (0)
+            📖 Saved Meals ({savedMeals?.length || 0})
           </button>
           <button className="btn btn-secondary" onClick={() => navigate('/stash?tab=ingredients')}>
-            🧪 Custom Ingredients (0)
+            🧪 Custom Ingredients ({customIngredients?.length || 0})
           </button>
         </div>
       </section>
@@ -347,19 +401,19 @@ export default function Settings() {
         <h2 className="section-title">📈 Dragon Statistics</h2>
         <div className="stats-grid">
           <div className="stat-item">
-            <span className="stat-value">0</span>
+            <span className="stat-value">{user?.stats?.total_meals_logged || 0}</span>
             <span className="stat-label">Meals logged</span>
           </div>
           <div className="stat-item">
-            <span className="stat-value">0</span>
+            <span className="stat-value">{user?.stats?.current_streak_days || 0}</span>
             <span className="stat-label">Day streak 🔥</span>
           </div>
           <div className="stat-item">
-            <span className="stat-value">0</span>
+            <span className="stat-value">{(savedMeals?.length || 0) + (customIngredients?.length || 0)}</span>
             <span className="stat-label">In hoard</span>
           </div>
           <div className="stat-item">
-            <span className="stat-value">0</span>
+            <span className="stat-value">{user?.badges?.length || 0}</span>
             <span className="stat-label">Badges</span>
           </div>
         </div>
