@@ -4,6 +4,7 @@ import Diary from './pages/Diary/Diary';
 import Charts from './pages/Charts/Charts';
 import Oracle from './pages/Oracle/Oracle';
 import Settings from './pages/Settings/Settings';
+import Stash from './pages/Stash/Stash';
 import './styles/global.css';
 
 function App() {
@@ -15,6 +16,7 @@ function App() {
           <Route path="/charts" element={<Charts />} />
           <Route path="/oracle" element={<Oracle />} />
           <Route path="/settings" element={<Settings />} />
+          <Route path="/stash" element={<Stash />} />
         </Routes>
         <Navigation />
       </div>

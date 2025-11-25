@@ -86,8 +86,8 @@ export default function Diary() {
   
   const emberState = getEmberState(totals, thresholds);
   
-  const addHydration = (amount) => {
-    setHydration(prev => prev + amount);
+  const adjustHydration = (amount) => {
+    setHydration(prev => Math.max(0, prev + amount));
   };
   
   const handleDayClick = (dateKey) => {
@@ -109,11 +109,23 @@ export default function Diary() {
     setMealInput('');
   };
   
+  // Parse YYYY-MM-DD string to local date for display
+  const parseLocalDate = (dateStr) => {
+    const [year, month, day] = dateStr.split('-').map(Number);
+    return new Date(year, month - 1, day);
+  };
+  
+  const displayDate = parseLocalDate(selectedDate).toLocaleDateString('en-US', { 
+    weekday: 'long', 
+    month: 'short', 
+    day: 'numeric' 
+  });
+  
   return (
     <div className="page diary-page">
       <Header 
         title="Dragon Keeper" 
-        subtitle={`Feeding log for ${new Date(selectedDate).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}`}
+        subtitle={`Feeding log for ${displayDate}`}
       />
       
       {/* Calendar Ribbon */}
@@ -183,9 +195,10 @@ export default function Diary() {
           />
         </div>
         <div className="hydration-buttons">
-          <button className="btn btn-secondary" onClick={() => addHydration(250)}>+250ml</button>
-          <button className="btn btn-secondary" onClick={() => addHydration(500)}>+500ml</button>
-          <button className="btn btn-secondary" onClick={() => addHydration(750)}>+Chalice 🏆</button>
+          <button className="btn btn-secondary btn-danger-outline" onClick={() => adjustHydration(-250)}>−250</button>
+          <button className="btn btn-secondary" onClick={() => adjustHydration(250)}>+250</button>
+          <button className="btn btn-secondary" onClick={() => adjustHydration(500)}>+500</button>
+          <button className="btn btn-secondary" onClick={() => adjustHydration(750)}>🏆+750</button>
         </div>
       </div>
       

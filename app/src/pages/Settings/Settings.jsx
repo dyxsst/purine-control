@@ -1,10 +1,12 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Header from '../../components/Header/Header';
 import { THEME_PRESETS, generateThemeFromSeed, applyTheme } from '../../lib/theme';
-import { DEFAULT_THRESHOLDS } from '../../lib/nutrition';
+import { DEFAULT_THRESHOLDS, calculateAllThresholds } from '../../lib/nutrition';
 import './Settings.css';
 
 export default function Settings() {
+  const navigate = useNavigate();
   const [profile, setProfile] = useState({
     name: 'Dragon Keeper',
     sex: 'male',
@@ -15,9 +17,20 @@ export default function Settings() {
     dietary_conditions: [],
   });
   
-  const [thresholds] = useState(DEFAULT_THRESHOLDS);
+  const [thresholds, setThresholds] = useState(DEFAULT_THRESHOLDS);
   const [selectedTheme, setSelectedTheme] = useState('emerald');
   const [customColor, setCustomColor] = useState('#66BB6A');
+  const [showThresholdEditor, setShowThresholdEditor] = useState(false);
+  
+  const handleCalculateNeeds = () => {
+    const calculated = calculateAllThresholds(profile);
+    setThresholds(calculated);
+    alert("Dragon's needs calculated! 🐉✨");
+  };
+  
+  const updateThreshold = (key, value) => {
+    setThresholds(prev => ({ ...prev, [key]: Number(value) }));
+  };
   
   const handleThemeChange = (presetKey) => {
     setSelectedTheme(presetKey);
@@ -131,38 +144,92 @@ export default function Settings() {
           </div>
         </div>
         
-        <button className="btn btn-primary w-full">
+        <button className="btn btn-primary w-full" onClick={handleCalculateNeeds}>
           Calculate Dragon's Needs 🔮
         </button>
       </section>
       
+      {/* Stash Management */}
+      <section className="settings-section card">
+        <h2 className="section-title">📚 Dragon's Hoard</h2>
+        <p className="text-muted">Manage your saved meals and custom ingredients.</p>
+        <div className="stash-buttons">
+          <button className="btn btn-secondary" onClick={() => navigate('/stash')}>
+            📖 Saved Meals (0)
+          </button>
+          <button className="btn btn-secondary" onClick={() => navigate('/stash?tab=ingredients')}>
+            🧪 Custom Ingredients (0)
+          </button>
+        </div>
+      </section>
+      
       {/* Thresholds Section */}
       <section className="settings-section card">
-        <h2 className="section-title">📊 Nutrition Thresholds</h2>
+        <div className="section-header-row">
+          <h2 className="section-title">📊 Nutrition Thresholds</h2>
+          <button 
+            className="btn btn-secondary btn-sm"
+            onClick={() => setShowThresholdEditor(!showThresholdEditor)}
+          >
+            {showThresholdEditor ? 'Done' : 'Edit'}
+          </button>
+        </div>
         
         <div className="threshold-row">
           <span className="threshold-label">🔥 Calories</span>
-          <span className="threshold-value">{thresholds.calories_min} - {thresholds.calories_max} kcal</span>
+          {showThresholdEditor ? (
+            <div className="threshold-inputs">
+              <input type="number" value={thresholds.calories_min} onChange={(e) => updateThreshold('calories_min', e.target.value)} className="threshold-input" />
+              <span>-</span>
+              <input type="number" value={thresholds.calories_max} onChange={(e) => updateThreshold('calories_max', e.target.value)} className="threshold-input" />
+              <span>kcal</span>
+            </div>
+          ) : (
+            <span className="threshold-value">{thresholds.calories_min} - {thresholds.calories_max} kcal</span>
+          )}
         </div>
         
         <div className="threshold-row">
           <span className="threshold-label">🧬 Purines</span>
-          <span className="threshold-value">{thresholds.purines_max} mg max</span>
+          {showThresholdEditor ? (
+            <div className="threshold-inputs">
+              <input type="number" value={thresholds.purines_max} onChange={(e) => updateThreshold('purines_max', e.target.value)} className="threshold-input" />
+              <span>mg max</span>
+            </div>
+          ) : (
+            <span className="threshold-value">{thresholds.purines_max} mg max</span>
+          )}
         </div>
         
         <div className="threshold-row">
           <span className="threshold-label">💪 Protein</span>
-          <span className="threshold-value">{thresholds.protein_target} g target</span>
+          {showThresholdEditor ? (
+            <div className="threshold-inputs">
+              <input type="number" value={thresholds.protein_target} onChange={(e) => updateThreshold('protein_target', e.target.value)} className="threshold-input" />
+              <span>g target</span>
+            </div>
+          ) : (
+            <span className="threshold-value">{thresholds.protein_target} g target</span>
+          )}
         </div>
         
         <div className="threshold-row">
           <span className="threshold-label">💧 Hydration</span>
-          <span className="threshold-value">{thresholds.hydration_target} ml target</span>
+          {showThresholdEditor ? (
+            <div className="threshold-inputs">
+              <input type="number" value={thresholds.hydration_target} onChange={(e) => updateThreshold('hydration_target', e.target.value)} className="threshold-input" />
+              <span>ml target</span>
+            </div>
+          ) : (
+            <span className="threshold-value">{thresholds.hydration_target} ml target</span>
+          )}
         </div>
         
-        <p className="text-muted text-center mt-md">
-          Use "Calculate Dragon's Needs" to auto-fill based on your profile.
-        </p>
+        {showThresholdEditor && (
+          <p className="text-muted text-center mt-sm">
+            Tip: Use "Calculate Dragon's Needs" to auto-fill based on your profile.
+          </p>
+        )}
       </section>
       
       {/* Theme Section */}

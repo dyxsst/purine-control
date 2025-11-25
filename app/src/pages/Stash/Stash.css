@@ -1,0 +1,128 @@
+.stash-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+/* Tabs */
+.stash-tabs {
+  display: flex;
+  gap: var(--space-xs);
+  background: var(--color-surface);
+  padding: var(--space-xs);
+  border-radius: var(--radius-md);
+}
+
+.stash-tab {
+  flex: 1;
+  padding: var(--space-sm) var(--space-md);
+  border: none;
+  background: none;
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  color: var(--color-text-secondary);
+}
+
+.stash-tab:hover {
+  background: var(--color-surface-variant);
+}
+
+.stash-tab.active {
+  background: var(--color-primary);
+  color: white;
+}
+
+/* Search */
+.stash-search {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--color-background);
+  padding: var(--space-xs) 0;
+}
+
+/* Content */
+.stash-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.stash-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+/* Stash Item */
+.stash-item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.stash-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.stash-item-header h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.use-count, .serving-info {
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+  background: var(--color-surface-variant);
+  padding: 2px var(--space-xs);
+  border-radius: var(--radius-sm);
+}
+
+.stash-item-ingredients {
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+  margin: 0;
+}
+
+.stash-item-nutrients {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  font-size: 0.8125rem;
+  font-family: var(--font-mono);
+  padding: var(--space-xs) 0;
+  border-top: 1px solid var(--color-border);
+}
+
+.stash-item-actions {
+  display: flex;
+  gap: var(--space-sm);
+  padding-top: var(--space-xs);
+}
+
+.stash-item-actions .btn {
+  flex: 1;
+}
+
+/* Empty State */
+.empty-state {
+  text-align: center;
+  padding: var(--space-xl);
+  color: var(--color-text-secondary);
+}
+
+.empty-state p:first-child {
+  font-size: 1.25rem;
+  margin-bottom: var(--space-sm);
+}
+
+/* Utility */
+.btn-sm {
+  padding: var(--space-xs) var(--space-sm);
+  font-size: 0.75rem;
+}

@@ -187,14 +187,25 @@
 
 .hydration-buttons {
   display: flex;
-  gap: var(--space-sm);
+  gap: var(--space-xs);
   flex-wrap: wrap;
 }
 
 .hydration-buttons .btn {
   flex: 1;
-  min-width: 80px;
-  font-size: 0.875rem;
+  min-width: 60px;
+  font-size: 0.8125rem;
+  padding: var(--space-sm);
+}
+
+.hydration-buttons .btn-danger-outline {
+  border-color: var(--color-danger);
+  color: var(--color-danger);
+}
+
+.hydration-buttons .btn-danger-outline:hover {
+  background: var(--color-danger);
+  color: white;
 }
 
 /* Meals Section */
