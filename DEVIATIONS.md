@@ -2,7 +2,8 @@
 
 **Project:** Purine Control - "The Dragon Keeper's Nutrition Tracker"  
 **Document Purpose:** Track all decisions and deviations from the original PDD during development  
-**Started:** November 25, 2025
+**Started:** November 25, 2025  
+**Last Updated:** November 25, 2025
 
 ---
 
@@ -93,7 +94,85 @@ These items need decisions before development can proceed:
 - Easy PWA conversion for future mobile support
 - Vite 7.1.12 already available globally
 
-### PENDING-002: Image Storage Solution
+---
+
+### DEV-005: Stash Page Restructured as "Dragon's Hoard"
+
+| Field | Value |
+|-------|-------|
+| **Date** | November 25, 2025 |
+| **Section** | Screen Specifications |
+| **Original Spec** | Custom items in Settings, hydration containers as simple list |
+| **New Decision** | Dedicated "Stash" page with three tabs: Saved Meals, Custom Ingredients, Hydration Bottles |
+| **Rationale** | Better UX to have stash items easily accessible; matches "Dragon's Hoard" theme; separation of concerns |
+| **Impact** | Navigation now has 5 tabs: Diary, Charts, Stash (new), Oracle, Settings |
+
+---
+
+### DEV-006: Meal Button Labels
+
+| Field | Value |
+|-------|-------|
+| **Date** | November 25, 2025 |
+| **Section** | Screen Specifications (6.1) |
+| **Original Spec** | Meal type buttons with combined icon+text |
+| **New Decision** | Stacked layout with icon on top, short label below (e.g., "🍳" + "Brekkie") |
+| **Rationale** | Better visibility on mobile; cleaner layout; allows shorter labels like "Brekkie" |
+| **Impact** | CSS updated for vertical flex layout in meal-type-btn |
+
+---
+
+### DEV-007: Threshold Calculation Enhancement
+
+| Field | Value |
+|-------|-------|
+| **Date** | November 25, 2025 |
+| **Section** | Nutrition Logic (Section 2) |
+| **Original Spec** | Basic Mifflin-St Jeor for calories, fixed values for others |
+| **New Decision** | Smart calculations for ALL 9 nutrients based on profile, sex, age, activity, and dietary conditions |
+| **Rationale** | More personalized recommendations; medical conditions affect multiple nutrients (e.g., diabetes affects carbs AND sugar) |
+| **Impact** | `calculateAllThresholds()` in `lib/nutrition.js` now returns condition-aware values |
+
+**Calculation Details:**
+- Calories: Mifflin-St Jeor BMR × activity multiplier
+- Purines: 400mg default, 200mg for gout, 150mg for kidney disease
+- Protein: 0.8-1.2g/kg based on activity level
+- Carbs: 45-55% of calories, reduced 15% for diabetes
+- Fat: 25-30% of calories
+- Fiber: 25-38g based on sex and age
+- Sodium: 2300mg, reduced to 1500mg for kidney disease
+- Sugar: 50g, reduced to 25g for diabetes or gout
+- Hydration: 30ml/kg × activity multiplier
+
+---
+
+### DEV-008: Hydration Adjustment Buttons
+
+| Field | Value |
+|-------|-------|
+| **Date** | November 25, 2025 |
+| **Section** | Screen Specifications (6.1) |
+| **Original Spec** | Only add water buttons (+250, +500, +Chalice) |
+| **New Decision** | Added −250ml button for corrections |
+| **Rationale** | User may accidentally add too much; easy corrections improve UX |
+| **Impact** | Added `btn-danger-outline` style for negative adjustment |
+
+---
+
+### DEV-009: Default Hydration Bottles
+
+| Field | Value |
+|-------|-------|
+| **Date** | November 25, 2025 |
+| **Section** | Data Architecture |
+| **Original Spec** | User must create custom containers |
+| **New Decision** | Pre-populated with 3 default bottles: Water Glass (250ml), Water Bottle (500ml), Dragon Chalice (750ml) |
+| **Rationale** | Better onboarding experience; common sizes readily available |
+| **Impact** | Demo data in Stash page; will become defaults in database |
+
+---
+
+## Pending Decisions
 **Options:** 
 - InstantDB blobs (if supported)
 - External service (Cloudinary, ImageKit)
@@ -120,11 +199,40 @@ These items need decisions before development can proceed:
 
 ---
 
+## Implementation Notes
+
+### NOTE-001: Daily Status Panel Positioning
+**Date:** November 25, 2025  
+**Issue:** Original PDD showed Daily Status as sticky at bottom, but this caused overlap with meal card buttons  
+**Resolution:** Changed to regular card in page flow (no sticky positioning)  
+**Files Affected:** `app/src/pages/Diary/Diary.css`
+
+### NOTE-002: Vite Default Styles Conflict
+**Date:** November 25, 2025  
+**Issue:** Default Vite template styles in `index.css` and `App.css` were conflicting with global styles, causing UI shrinkage  
+**Resolution:** Removed all Vite default styles; using only `src/styles/global.css`  
+**Files Affected:** `app/src/index.css`, `app/src/App.css`
+
+### NOTE-003: Git Dist Tracking for GitHub Pages
+**Date:** November 25, 2025  
+**Issue:** `dist` folder was in `.gitignore`, preventing built assets from being deployed  
+**Resolution:** Removed `dist` from `.gitignore` so build artifacts are automatically tracked  
+**Files Affected:** `app/.gitignore`
+
+### NOTE-004: Calendar Date Parsing
+**Date:** November 25, 2025  
+**Issue:** Date display was off by one day due to timezone issues with `new Date(dateString)`  
+**Resolution:** Created `parseLocalDate()` helper that splits YYYY-MM-DD and constructs local date  
+**Files Affected:** `app/src/pages/Diary/Diary.jsx`
+
+---
+
 ## Version History
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0 | Nov 25, 2025 | Initial | Document created with initial deviations |
+| 1.1 | Nov 25, 2025 | Update | Added DEV-005 through DEV-009, resolved PENDING-001, added implementation notes |
 
 ---
 

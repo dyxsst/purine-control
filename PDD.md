@@ -1,9 +1,11 @@
 # Purine Control - Product Design Document
 ## "The Dragon Keeper's Nutrition Tracker"
 
-**Version:** 1.0  
+**Version:** 1.1  
 **Date:** November 25, 2025  
+**Last Updated:** November 25, 2025  
 **Repository:** https://github.com/dyxsst/purine-control  
+**Live Demo:** https://dyxsst.github.io/purine-control/  
 **Database:** InstantDB (App ID: fb13a3d0-35ab-493b-9aa6-64a77363fe93)
 
 ---
@@ -710,78 +712,83 @@ async function analyzeImage(imageUrl) {
 
 ## 8. 🚀 IMPLEMENTATION PHASES
 
-### Phase 1: Foundation
-- [ ] Project setup (Vite + React/Vue)
-- [ ] InstantDB integration
+### Phase 1: Foundation ✅ COMPLETE
+- [x] Project setup (Vite + React)
+- [x] GitHub Pages deployment
+- [x] Theme engine implementation (Dragon Scale Shimmer)
+- [x] Navigation structure (bottom tab bar)
+- [x] Base component library (Header, Card, ProgressBar, Button)
+- [x] EmberMascot component with state-based animations
+- [ ] InstantDB integration (schema ready, hooks not connected)
 - [ ] Authentication system
-- [ ] Theme engine implementation
-- [ ] Navigation structure
-- [ ] Base component library
 
-### Phase 2: Meal Diary (Core)
-- [ ] Calendar ribbon component
-- [ ] Meal type selector
-- [ ] Text input + AI parsing
+### Phase 2: Meal Diary (Core) 🔄 IN PROGRESS
+- [x] Calendar ribbon component (week view, navigation, clickable days)
+- [x] Meal type selector (Breakfast, Lunch, Dinner, Snack)
+- [x] Text input placeholder
+- [x] Meal cards display (demo data)
+- [x] Daily totals calculation
+- [x] Daily status panel with all nutrients
+- [x] Hydration tracking (+250, +500, +750, -250 buttons)
+- [ ] AI parsing integration
 - [ ] Ingredient consistency engine
-- [ ] Meal cards display
-- [ ] Daily totals calculation
 - [ ] Edit meal (local recalc)
 - [ ] Delete meal
 
-### Phase 3: Enhanced Input
-- [ ] Image upload to storage
-- [ ] OCR for nutrition labels
-- [ ] AI vision for food photos
-- [ ] Voice input integration
-- [ ] Save to Stash feature
-- [ ] Hydration tracking
+### Phase 3: Dragon's Hoard (Stash) 🔄 IN PROGRESS
+- [x] Stash page with tabs (Meals, Ingredients, Bottles)
+- [x] Demo data for meals, ingredients, bottles
+- [x] Search bar placeholder
+- [ ] Add/Edit/Delete functionality
+- [ ] Use from stash in Diary
 
-### Phase 4: Analytics
-- [ ] Chart Gallery screen
+### Phase 4: Settings 🔄 IN PROGRESS
+- [x] Profile section (name, sex, age, weight, height, activity)
+- [x] Dietary conditions (gout, kidney disease, diabetes)
+- [x] All nutrition thresholds display (9 nutrients)
+- [x] Editable thresholds mode
+- [x] Calculate recommendations button (smart calculations)
+- [x] Theme picker (3 presets: Emerald, Midnight, Crystal)
+- [ ] Account management
+- [ ] Data export
+
+### Phase 5: Charts (Placeholder)
+- [x] Charts page shell created
+- [ ] Recharts integration
 - [ ] Date range selection
-- [ ] Grouping (daily/weekly/monthly)
 - [ ] Nutrient filters
 - [ ] Threshold lines
-- [ ] Interactive tooltips
-- [ ] Export functionality
 
-### Phase 5: Recommendations
-- [ ] "What to Devour?" screen
+### Phase 6: Oracle (Placeholder)
+- [x] Oracle page shell created
+- [ ] AI recommendation integration
 - [ ] Budget calculation
-- [ ] History analysis
-- [ ] AI recommendation generation
 - [ ] "I Made This!" quick-log
-- [ ] "Tweak It" pre-fill
-
-### Phase 6: Polish
-- [ ] Settings screen complete
-- [ ] Custom items management
-- [ ] Badge system
-- [ ] Animations (Ember mascot)
-- [ ] Offline support
-- [ ] Accessibility (high contrast, voice)
-- [ ] Performance optimization
-- [ ] Testing
 
 ---
 
 ## 9. 🛠️ TECH STACK
 
-### Frontend
-- **Framework:** Web-based (Vite + React or Vue) - *See Deviations*
-- **State Management:** TBD based on framework choice
-- **Charts:** Chart.js or similar
-- **Animations:** CSS animations / Lottie-web
+### Frontend (Implemented)
+- **Framework:** React 19.2.0 + Vite 7.2.4
+- **Routing:** react-router-dom 7.9.6 (HashRouter for GitHub Pages)
+- **State Management:** React useState/useContext (local state)
+- **Charts:** Recharts 3.5.0 (installed, not yet integrated)
+- **Animations:** CSS animations + lottie-react 2.4.1
 
-### Backend
-- **Database:** InstantDB (real-time sync, offline support)
-- **Authentication:** InstantDB Auth or external provider
-- **Storage:** For images (TBD - could be InstantDB blobs or external)
-- **AI Integration:** API calls to Gemini/OpenAI
+### Backend (Configured, Not Yet Integrated)
+- **Database:** InstantDB @instantdb/react 0.22.73
+- **Authentication:** TBD (InstantDB auth or external)
+- **Storage:** TBD for images
+
+### Deployment
+- **Hosting:** GitHub Pages
+- **Build:** Vite with `base: '/purine-control/'`
+- **Deploy:** git subtree to gh-pages branch
 
 ### Development
 - **IDE:** VS Code
-- **Version Control:** GitHub
+- **Version Control:** Git + GitHub
 - **Repository:** https://github.com/dyxsst/purine-control
 
 ---
