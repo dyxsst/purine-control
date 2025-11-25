@@ -214,6 +214,66 @@ export default function Settings() {
         </div>
         
         <div className="threshold-row">
+          <span className="threshold-label">🍞 Carbs</span>
+          {showThresholdEditor ? (
+            <div className="threshold-inputs">
+              <input type="number" value={thresholds.carbs_target} onChange={(e) => updateThreshold('carbs_target', e.target.value)} className="threshold-input" />
+              <span>g target</span>
+            </div>
+          ) : (
+            <span className="threshold-value">{thresholds.carbs_target} g target</span>
+          )}
+        </div>
+        
+        <div className="threshold-row">
+          <span className="threshold-label">🥑 Fat</span>
+          {showThresholdEditor ? (
+            <div className="threshold-inputs">
+              <input type="number" value={thresholds.fat_target} onChange={(e) => updateThreshold('fat_target', e.target.value)} className="threshold-input" />
+              <span>g target</span>
+            </div>
+          ) : (
+            <span className="threshold-value">{thresholds.fat_target} g target</span>
+          )}
+        </div>
+        
+        <div className="threshold-row">
+          <span className="threshold-label">🌾 Fiber</span>
+          {showThresholdEditor ? (
+            <div className="threshold-inputs">
+              <input type="number" value={thresholds.fiber_target} onChange={(e) => updateThreshold('fiber_target', e.target.value)} className="threshold-input" />
+              <span>g target</span>
+            </div>
+          ) : (
+            <span className="threshold-value">{thresholds.fiber_target} g target</span>
+          )}
+        </div>
+        
+        <div className="threshold-row">
+          <span className="threshold-label">🧂 Sodium</span>
+          {showThresholdEditor ? (
+            <div className="threshold-inputs">
+              <input type="number" value={thresholds.sodium_max} onChange={(e) => updateThreshold('sodium_max', e.target.value)} className="threshold-input" />
+              <span>mg max</span>
+            </div>
+          ) : (
+            <span className="threshold-value">{thresholds.sodium_max} mg max</span>
+          )}
+        </div>
+        
+        <div className="threshold-row">
+          <span className="threshold-label">🍯 Sugar</span>
+          {showThresholdEditor ? (
+            <div className="threshold-inputs">
+              <input type="number" value={thresholds.sugar_max} onChange={(e) => updateThreshold('sugar_max', e.target.value)} className="threshold-input" />
+              <span>g max</span>
+            </div>
+          ) : (
+            <span className="threshold-value">{thresholds.sugar_max} g max</span>
+          )}
+        </div>
+        
+        <div className="threshold-row">
           <span className="threshold-label">💧 Hydration</span>
           {showThresholdEditor ? (
             <div className="threshold-inputs">

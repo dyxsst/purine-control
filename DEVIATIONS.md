@@ -83,13 +83,15 @@ When a decision is made that differs from the PDD, log it here with:
 
 These items need decisions before development can proceed:
 
-### PENDING-001: Frontend Framework
-**Options:** React, Vue, Svelte, vanilla JS  
-**Considerations:** 
-- Developer familiarity
-- Component ecosystem
-- InstantDB integration
-- Animation support
+### ~~PENDING-001: Frontend Framework~~ → RESOLVED
+**Decision:** React + Vite  
+**Date:** November 25, 2025  
+**Rationale:**
+- InstantDB has first-class React hooks (`useQuery`, `useMutation`)
+- Rich ecosystem for charts (Recharts) and animations (lottie-react)
+- Developer familiarity (Kanban project uses React)
+- Easy PWA conversion for future mobile support
+- Vite 7.1.12 already available globally
 
 ### PENDING-002: Image Storage Solution
 **Options:** 

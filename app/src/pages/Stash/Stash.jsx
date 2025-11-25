@@ -34,9 +34,17 @@ const DEMO_INGREDIENTS = [
   },
 ];
 
+// Demo hydration bottles
+const DEMO_BOTTLES = [
+  { id: '1', name: 'Water Glass', amount_ml: 250, icon: '🥛' },
+  { id: '2', name: 'Water Bottle', amount_ml: 500, icon: '🍶' },
+  { id: '3', name: 'Dragon Chalice', amount_ml: 750, icon: '🏆' },
+];
+
 const TABS = [
-  { key: 'meals', label: '📖 Saved Meals', icon: '📖' },
-  { key: 'ingredients', label: '🧪 Custom Ingredients', icon: '🧪' },
+  { key: 'meals', label: '📖 Meals', icon: '📖' },
+  { key: 'ingredients', label: '🧪 Ingredients', icon: '🧪' },
+  { key: 'bottles', label: '🍶 Bottles', icon: '🍶' },
 ];
 
 export default function Stash() {
@@ -47,6 +55,7 @@ export default function Stash() {
   const [activeTab, setActiveTab] = useState(initialTab);
   const [savedMeals] = useState(DEMO_SAVED_MEALS);
   const [customIngredients] = useState(DEMO_INGREDIENTS);
+  const [bottles] = useState(DEMO_BOTTLES);
   const [searchQuery, setSearchQuery] = useState('');
   
   const handleTabChange = (tab) => {
@@ -60,6 +69,10 @@ export default function Stash() {
   
   const filteredIngredients = customIngredients.filter(ing => 
     ing.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+  
+  const filteredBottles = bottles.filter(bottle => 
+    bottle.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
   
   return (
@@ -95,7 +108,7 @@ export default function Stash() {
       </div>
       
       {/* Content */}
-      {activeTab === 'meals' ? (
+      {activeTab === 'meals' && (
         <section className="stash-content">
           {filteredMeals.length === 0 ? (
             <div className="empty-state card">
@@ -132,7 +145,9 @@ export default function Stash() {
             ➕ Create New Meal
           </button>
         </section>
-      ) : (
+      )}
+      
+      {activeTab === 'ingredients' && (
         <section className="stash-content">
           {filteredIngredients.length === 0 ? (
             <div className="empty-state card">
@@ -165,6 +180,42 @@ export default function Stash() {
           
           <button className="btn btn-secondary w-full mt-md">
             ➕ Add Custom Ingredient
+          </button>
+        </section>
+      )}
+      
+      {activeTab === 'bottles' && (
+        <section className="stash-content">
+          <p className="text-muted">Custom hydration containers for quick logging.</p>
+          
+          {filteredBottles.length === 0 ? (
+            <div className="empty-state card">
+              <p>🍶 No custom bottles yet!</p>
+              <p className="text-muted">Add your favorite containers.</p>
+            </div>
+          ) : (
+            <div className="stash-list">
+              {filteredBottles.map(bottle => (
+                <div key={bottle.id} className="stash-item card bottle-item">
+                  <div className="bottle-info">
+                    <span className="bottle-icon">{bottle.icon}</span>
+                    <div className="bottle-details">
+                      <h3>{bottle.name}</h3>
+                      <span className="bottle-amount">{bottle.amount_ml} ml</span>
+                    </div>
+                  </div>
+                  <div className="stash-item-actions">
+                    <button className="btn btn-primary btn-sm">💧 Use</button>
+                    <button className="btn btn-secondary btn-sm">✏️</button>
+                    <button className="btn btn-secondary btn-sm">🗑️</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          
+          <button className="btn btn-secondary w-full mt-md">
+            ➕ Add Custom Bottle
           </button>
         </section>
       )}

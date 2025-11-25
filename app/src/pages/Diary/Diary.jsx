@@ -34,10 +34,10 @@ const DEMO_MEALS = [
 ];
 
 const MEAL_TYPES = [
-  { key: 'breakfast', label: '🍳 Brekkie', longLabel: 'Breakfast' },
-  { key: 'lunch', label: '🌮 Lunch', longLabel: 'Lunch' },
-  { key: 'dinner', label: '🍝 Dinner', longLabel: 'Dinner' },
-  { key: 'snack', label: '🍪 Snack', longLabel: 'Snack' },
+  { key: 'breakfast', icon: '🍳', label: 'Brekkie' },
+  { key: 'lunch', icon: '🌮', label: 'Lunch' },
+  { key: 'dinner', icon: '🍝', label: 'Dinner' },
+  { key: 'snack', icon: '🍪', label: 'Snack' },
 ];
 
 // Helper to get a date string in YYYY-MM-DD format
@@ -158,7 +158,8 @@ export default function Diary() {
             className={`meal-type-btn ${selectedMealType === type.key ? 'active' : ''}`}
             onClick={() => setSelectedMealType(type.key)}
           >
-            {type.label}
+            <span className="meal-icon">{type.icon}</span>
+            <span className="meal-label">{type.label}</span>
           </button>
         ))}
       </div>
@@ -218,7 +219,7 @@ export default function Diary() {
               <div key={meal.id} className="meal-card card">
                 <div className="meal-header">
                   <span className="meal-type-badge">
-                    {MEAL_TYPES.find(t => t.key === meal.meal_type)?.label || '🍽️'}
+                    {MEAL_TYPES.find(t => t.key === meal.meal_type)?.icon || '🍽️'}
                   </span>
                   <h3 className="meal-name">{meal.meal_name}</h3>
                 </div>

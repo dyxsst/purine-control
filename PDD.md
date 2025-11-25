@@ -477,7 +477,7 @@ Provide gram estimates based on typical portion sizes.
 
 **Prompt 4: Recommendation Generation**
 ```
-Generate 3 [MEAL_TYPE] meal recommendations for a dragon keeper.
+Generate 3 [MEAL_TYPE] meal recommendations.
 
 User Context:
 - Dietary conditions: [CONDITIONS]
@@ -489,8 +489,8 @@ Return ONLY valid JSON array with no markdown formatting:
 [
   {
     "type": "familiar",
-    "name": "meal name with dragon theme",
-    "description": "2-3 sentence whimsical description with dragon puns",
+    "name": "meal name",
+    "description": "2-3 sentence description",
     "ingredients": [{"name": "...", "quantity": number, "unit": "..."}],
     "estimated_nutrients": {
       "calories": number,
@@ -509,7 +509,6 @@ Requirements:
 - "twist": Similar ingredients but different cuisine/preparation
 - "wild": Creative, different ingredients, unexpected flavors
 - ALL must stay within remaining budget
-- Include fun dragon-themed names and descriptions
 ```
 
 ### 5.2 Image Analysis Strategy
@@ -655,8 +654,8 @@ async function analyzeImage(imageUrl) {
 │ ORACLE'S VISIONS                    │
 │                                     │
 │ ┌─ 🏺 The Familiar Feast ─────────┐ │
-│ │ Grilled Dragon-Scale Chicken    │ │
-│ │ Tender chicken with herb magic! │ │
+│ │ Grilled Chicken                 │ │
+│ │ Tender chicken with spices!     │ │
 │ │ 📊 380 cal | 65mg purines       │ │
 │ │ [I Made This! 🍽️] [Tweak It ✏️] │ │
 │ └─────────────────────────────────┘ │
@@ -804,9 +803,6 @@ Use playful, informal labels throughout:
 
 | Standard | Dragon Keeper Style |
 |----------|---------------------|
-| Breakfast | Brekkie Blast |
-| Lunch | Lunch-a-Palooza |
-| Dinner | Dine & Dragon |
 | Snack | Nibble Time |
 | Add Water | Glug Gauge |
 | Save Meal | Stash in Hoard |

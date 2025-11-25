@@ -109,6 +109,39 @@
   flex: 1;
 }
 
+/* Bottle Item */
+.bottle-item {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.bottle-info {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.bottle-icon {
+  font-size: 2rem;
+}
+
+.bottle-details h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.bottle-amount {
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+}
+
+.bottle-item .stash-item-actions {
+  flex: 0;
+  padding: 0;
+}
+
 /* Empty State */
 .empty-state {
   text-align: center;
