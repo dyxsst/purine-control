@@ -304,9 +304,7 @@
 /* Daily Status */
 .daily-status {
   background: var(--color-surface);
-  position: sticky;
-  bottom: 80px;
-  z-index: 50;
+  margin-bottom: var(--space-md);
 }
 
 .status-header {
