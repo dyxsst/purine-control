@@ -8,49 +8,73 @@
 .calendar-ribbon {
   display: flex;
   align-items: center;
-  gap: var(--space-sm);
+  gap: var(--space-xs);
   padding: var(--space-sm);
   overflow: hidden;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .cal-nav {
+  flex-shrink: 0;
   background: none;
   border: none;
-  padding: var(--space-sm);
+  padding: var(--space-xs);
   color: var(--color-text-secondary);
-  font-size: 1rem;
+  font-size: 0.875rem;
   cursor: pointer;
   transition: color var(--transition-fast);
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
 }
 
 .cal-nav:hover {
   color: var(--color-primary);
+  background: var(--color-surface-variant);
+}
+
+.cal-nav:active {
+  transform: scale(0.95);
 }
 
 .cal-days {
   display: flex;
-  gap: var(--space-xs);
+  gap: 2px;
   flex: 1;
-  justify-content: space-around;
-  overflow-x: auto;
+  justify-content: space-between;
+  overflow: hidden;
+  min-width: 0;
 }
 
 .cal-day {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: var(--space-xs) var(--space-sm);
+  justify-content: center;
+  padding: var(--space-xs) 0;
   border: none;
   background: none;
   border-radius: var(--radius-md);
   cursor: pointer;
   transition: all var(--transition-fast);
-  min-width: 40px;
+  flex: 1;
+  min-width: 0;
+  max-width: 44px;
   position: relative;
+  color: var(--color-text);
 }
 
 .cal-day:hover {
   background: var(--color-surface-variant);
+}
+
+.cal-day.today:not(.active) {
+  border: 2px solid var(--color-primary);
 }
 
 .cal-day.active {
@@ -66,14 +90,15 @@
 }
 
 .cal-day-num {
-  font-size: 1rem;
+  font-size: 0.9375rem;
   font-weight: 700;
 }
 
 .cal-day-indicator {
   position: absolute;
-  bottom: -2px;
+  bottom: 0;
   font-size: 0.5rem;
+  line-height: 1;
 }
 
 /* Meal Type Selector */

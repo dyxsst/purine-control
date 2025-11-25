@@ -40,13 +40,39 @@ const MEAL_TYPES = [
   { key: 'snack', label: '🍪 Snack', longLabel: 'Snack' },
 ];
 
+// Helper to get a date string in YYYY-MM-DD format
+const formatDateKey = (date) => {
+  const d = new Date(date);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+
+// Helper to create date objects for the calendar ribbon
+const getCalendarDays = (centerDate) => {
+  const days = [];
+  for (let offset = -3; offset <= 3; offset++) {
+    const date = new Date(centerDate);
+    date.setDate(date.getDate() + offset);
+    days.push({
+      date,
+      dateKey: formatDateKey(date),
+      dayName: date.toLocaleDateString('en-US', { weekday: 'short' }).charAt(0),
+      dayNum: date.getDate(),
+      isToday: formatDateKey(date) === formatDateKey(new Date()),
+    });
+  }
+  return days;
+};
+
 export default function Diary() {
-  const [selectedDate] = useState(getToday());
+  const [selectedDate, setSelectedDate] = useState(getToday());
+  const [calendarCenter, setCalendarCenter] = useState(new Date());
   const [selectedMealType, setSelectedMealType] = useState('breakfast');
   const [mealInput, setMealInput] = useState('');
   const [meals] = useState(DEMO_MEALS);
   const [hydration, setHydration] = useState(1250);
   const [showAllNutrients, setShowAllNutrients] = useState(false);
+  
+  const calendarDays = getCalendarDays(calendarCenter);
   
   const thresholds = DEFAULT_THRESHOLDS;
   
@@ -62,6 +88,16 @@ export default function Diary() {
   
   const addHydration = (amount) => {
     setHydration(prev => prev + amount);
+  };
+  
+  const handleDayClick = (dateKey) => {
+    setSelectedDate(dateKey);
+  };
+  
+  const navigateCalendar = (direction) => {
+    const newCenter = new Date(calendarCenter);
+    newCenter.setDate(newCenter.getDate() + (direction === 'next' ? 7 : -7));
+    setCalendarCenter(newCenter);
   };
   
   const handleLogMeal = (e) => {
@@ -82,25 +118,24 @@ export default function Diary() {
       
       {/* Calendar Ribbon */}
       <div className="calendar-ribbon card">
-        <button className="cal-nav">◀</button>
+        <button className="cal-nav" onClick={() => navigateCalendar('prev')} aria-label="Previous week">◀</button>
         <div className="cal-days">
-          {[-3, -2, -1, 0, 1, 2, 3].map(offset => {
-            const date = new Date();
-            date.setDate(date.getDate() + offset);
-            const isToday = offset === 0;
+          {calendarDays.map(day => {
+            const isSelected = day.dateKey === selectedDate;
             return (
               <button 
-                key={offset}
-                className={`cal-day ${isToday ? 'active' : ''}`}
+                key={day.dateKey}
+                className={`cal-day ${isSelected ? 'active' : ''} ${day.isToday ? 'today' : ''}`}
+                onClick={() => handleDayClick(day.dateKey)}
               >
-                <span className="cal-day-name">{date.toLocaleDateString('en-US', { weekday: 'short' }).charAt(0)}</span>
-                <span className="cal-day-num">{date.getDate()}</span>
-                {isToday && <span className="cal-day-indicator">🐾</span>}
+                <span className="cal-day-name">{day.dayName}</span>
+                <span className="cal-day-num">{day.dayNum}</span>
+                {day.isToday && <span className="cal-day-indicator">🐾</span>}
               </button>
             );
           })}
         </div>
-        <button className="cal-nav">▶</button>
+        <button className="cal-nav" onClick={() => navigateCalendar('next')} aria-label="Next week">▶</button>
       </div>
       
       {/* Meal Type Selector */}
