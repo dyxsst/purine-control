@@ -88,23 +88,62 @@ export function calculateHydrationTarget(weight_kg, activity_level) {
  * Auto-calculate all thresholds from profile
  */
 export function calculateAllThresholds(profile) {
-  const { weight_kg, height_cm, age, sex, activity_level, dietary_conditions } = profile;
+  const { weight_kg, height_cm, age, sex, activity_level, dietary_conditions = [] } = profile;
   
   const dailyCalories = calculateDailyCalories(weight_kg, height_cm, age, sex, activity_level);
   const purineMax = calculatePurineLimit(dietary_conditions);
   const hydrationTarget = calculateHydrationTarget(weight_kg, activity_level);
   
+  // Protein: 0.8-1g per kg body weight, higher for active people
+  const proteinMultiplier = {
+    sedentary: 0.8,
+    light: 0.9,
+    moderate: 1.0,
+    active: 1.2,
+    very_active: 1.4,
+  };
+  const proteinTarget = Math.round(weight_kg * (proteinMultiplier[activity_level] || 1.0));
+  
+  // Carbs: 45-65% of calories (4 cal/g), lower for diabetes
+  let carbPercent = 0.50;
+  if (dietary_conditions.includes('diabetes')) {
+    carbPercent = 0.40; // Lower carbs for diabetes
+  }
+  const carbsTarget = Math.round((dailyCalories * carbPercent) / 4);
+  
+  // Fat: 20-35% of calories (9 cal/g)
+  const fatTarget = Math.round((dailyCalories * 0.275) / 9);
+  
+  // Fiber: 25g women, 38g men, adjusted by age
+  let fiberTarget = sex === 'female' ? 25 : 38;
+  if (age > 50) {
+    fiberTarget = sex === 'female' ? 21 : 30;
+  }
+  
+  // Sodium: 2300mg general, lower for kidney disease or hypertension risk
+  let sodiumMax = 2300;
+  if (dietary_conditions.includes('kidney_disease')) {
+    sodiumMax = 1500;
+  }
+  
+  // Sugar: 25g women, 36g men (AHA recommendations)
+  // Lower for diabetes or gout
+  let sugarMax = sex === 'female' ? 25 : 36;
+  if (dietary_conditions.includes('diabetes') || dietary_conditions.includes('gout')) {
+    sugarMax = Math.round(sugarMax * 0.6); // 40% reduction
+  }
+  
   return {
-    calories_min: Math.round(dailyCalories * 0.8),
+    calories_min: Math.round(dailyCalories * 0.85),
     calories_max: dailyCalories,
     purines_min: 0,
     purines_max: purineMax,
-    protein_target: Math.round((dailyCalories * 0.175) / 4), // 17.5% of calories, 4 cal/g
-    carbs_target: Math.round((dailyCalories * 0.50) / 4),    // 50% of calories
-    fat_target: Math.round((dailyCalories * 0.275) / 9),     // 27.5% of calories, 9 cal/g
-    fiber_target: 25,
-    sodium_max: 2300,
-    sugar_max: 50,
+    protein_target: proteinTarget,
+    carbs_target: carbsTarget,
+    fat_target: fatTarget,
+    fiber_target: fiberTarget,
+    sodium_max: sodiumMax,
+    sugar_max: sugarMax,
     hydration_target: hydrationTarget,
   };
 }
