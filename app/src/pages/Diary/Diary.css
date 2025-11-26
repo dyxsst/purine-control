@@ -289,7 +289,30 @@
 }
 
 .meal-ingredients li {
-  margin-bottom: 2px;
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  margin-bottom: 4px;
+  flex-wrap: wrap;
+}
+
+.meal-ingredients .ing-name {
+  flex: 1;
+  min-width: 100px;
+}
+
+.meal-ingredients .ing-qty {
+  font-size: 0.75rem;
+  opacity: 0.7;
+}
+
+.meal-ingredients .ing-nutrients {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--color-text);
+  background: var(--color-surface-variant);
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
 }
 
 .meal-nutrients {
@@ -301,6 +324,14 @@
   border-top: 1px solid var(--color-border);
   border-bottom: 1px solid var(--color-border);
   margin-bottom: var(--space-sm);
+}
+
+.meal-nutrients.meal-totals {
+  font-weight: 600;
+}
+
+.meal-nutrients .total-label {
+  opacity: 0.7;
 }
 
 .meal-actions {

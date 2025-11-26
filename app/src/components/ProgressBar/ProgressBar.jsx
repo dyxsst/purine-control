@@ -22,7 +22,7 @@ export default function NutrientProgress({
         <div className="nutrient-header">
           <span className="nutrient-label">
             <span className="nutrient-icon">{info.icon}</span>
-            {!compact && <span className="nutrient-name">{info.label}</span>}
+            <span className="nutrient-name">{info.label}</span>
           </span>
           <span className="nutrient-value">
             <span className="current">{Math.round(value)}</span>

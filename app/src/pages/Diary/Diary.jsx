@@ -52,6 +52,11 @@ export default function Diary() {
   const [editingMeal, setEditingMeal] = useState(null);
   const [editMealName, setEditMealName] = useState('');
   const [editMealType, setEditMealType] = useState('snack');
+  const [editMealDate, setEditMealDate] = useState('');
+  
+  // Copy meal modal
+  const [copyingMeal, setCopyingMeal] = useState(null);
+  const [copyToDate, setCopyToDate] = useState('');
   
   // Use real data hooks
   const { meals, isLoading: mealsLoading, addMeal, updateMeal, deleteMeal, getDailyTotals } = useMeals(selectedDate);
@@ -119,12 +124,13 @@ export default function Diary() {
     // Use AI to parse and analyze the meal
     setIsProcessing(true);
     try {
-      const { ingredients, total_nutrients } = await processFullMeal(mealInput);
+      const { meal_name, ingredients, total_nutrients } = await processFullMeal(mealInput);
       
       const newMeal = {
         date: selectedDate,
         meal_type: selectedMealType,
-        meal_name: mealInput,
+        meal_name: meal_name,  // AI-generated short name
+        description: mealInput, // Store original input as description
         ingredients: ingredients,
         total_nutrients: total_nutrients,
         hydration_ml: 0,
@@ -152,6 +158,7 @@ export default function Diary() {
     setEditingMeal(meal);
     setEditMealName(meal.meal_name);
     setEditMealType(meal.meal_type);
+    setEditMealDate(meal.date);
   };
   
   // Save edited meal
@@ -161,6 +168,7 @@ export default function Diary() {
     await updateMeal(editingMeal.id, {
       meal_name: editMealName,
       meal_type: editMealType,
+      date: editMealDate,
     });
     
     setEditingMeal(null);
@@ -171,6 +179,32 @@ export default function Diary() {
     setEditingMeal(null);
     setEditMealName('');
     setEditMealType('snack');
+    setEditMealDate('');
+  };
+  
+  // Copy meal to another date
+  const handleCopyMeal = (meal) => {
+    setCopyingMeal(meal);
+    setCopyToDate(getToday());
+  };
+  
+  const handleConfirmCopy = async () => {
+    if (!copyingMeal || !copyToDate) return;
+    
+    const copiedMeal = {
+      date: copyToDate,
+      meal_type: copyingMeal.meal_type,
+      meal_name: copyingMeal.meal_name,
+      description: copyingMeal.description,
+      ingredients: copyingMeal.ingredients,
+      total_nutrients: copyingMeal.total_nutrients,
+      hydration_ml: 0,
+      analysis_method: 'copy',
+    };
+    
+    await addMeal(copiedMeal);
+    setCopyingMeal(null);
+    alert(`Meal copied to ${copyToDate}! 📋`);
   };
   
   // Save meal to stash
@@ -337,16 +371,24 @@ export default function Diary() {
                 {meal.ingredients && meal.ingredients.length > 0 && (
                   <ul className="meal-ingredients">
                     {meal.ingredients.map((ing, i) => (
-                      <li key={i}>• {ing.name} ({ing.quantity}{ing.unit})</li>
+                      <li key={i}>
+                        <span className="ing-name">• {ing.name}</span>
+                        <span className="ing-qty">({ing.quantity}{ing.unit})</span>
+                        <span className="ing-nutrients">
+                          🔥{Math.round(ing.nutrients_per_unit?.calories || 0)} · 🧬{Math.round(ing.nutrients_per_unit?.purines || 0)}
+                        </span>
+                      </li>
                     ))}
                   </ul>
                 )}
-                <div className="meal-nutrients">
-                  <span>🔥 {meal.total_nutrients?.calories || 0} cal</span>
-                  <span>🧬 {meal.total_nutrients?.purines || 0}mg purines</span>
+                <div className="meal-nutrients meal-totals">
+                  <span className="total-label">Total:</span>
+                  <span>🔥 {Math.round(meal.total_nutrients?.calories || 0)} cal</span>
+                  <span>🧬 {Math.round(meal.total_nutrients?.purines || 0)}mg</span>
                 </div>
                 <div className="meal-actions">
                   <button className="btn btn-secondary" onClick={() => handleEditMeal(meal)}>✏️ Edit</button>
+                  <button className="btn btn-secondary" onClick={() => handleCopyMeal(meal)}>📋 Copy</button>
                   <button className="btn btn-secondary" onClick={() => handleDeleteMeal(meal.id)}>🗑️</button>
                   <button className="btn btn-secondary" onClick={() => handleSaveToStash(meal)}>📚 Stash</button>
                 </div>
@@ -414,9 +456,39 @@ export default function Diary() {
                 ))}
               </select>
             </div>
+            <div className="form-group">
+              <label>Date (move to different day)</label>
+              <input
+                type="date"
+                value={editMealDate}
+                onChange={(e) => setEditMealDate(e.target.value)}
+              />
+            </div>
             <div className="modal-actions">
               <button className="btn btn-secondary" onClick={handleCancelEdit}>Cancel</button>
               <button className="btn btn-primary" onClick={handleSaveEdit}>💾 Save</button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Copy Meal Modal */}
+      {copyingMeal && (
+        <div className="modal-overlay" onClick={() => setCopyingMeal(null)}>
+          <div className="modal-content card" onClick={(e) => e.stopPropagation()}>
+            <h2>📋 Copy Meal</h2>
+            <p>Copy "{copyingMeal.meal_name}" to another date:</p>
+            <div className="form-group">
+              <label>Target Date</label>
+              <input
+                type="date"
+                value={copyToDate}
+                onChange={(e) => setCopyToDate(e.target.value)}
+              />
+            </div>
+            <div className="modal-actions">
+              <button className="btn btn-secondary" onClick={() => setCopyingMeal(null)}>Cancel</button>
+              <button className="btn btn-primary" onClick={handleConfirmCopy}>📋 Copy Meal</button>
             </div>
           </div>
         </div>
