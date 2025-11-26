@@ -5,6 +5,7 @@ import { useUser } from '../../contexts/UserContext';
 import { useStash } from '../../hooks/useData';
 import { THEME_PRESETS, generateThemeFromSeed, applyTheme } from '../../lib/theme';
 import { DEFAULT_THRESHOLDS, calculateAllThresholds } from '../../lib/nutrition';
+import { hasApiKey, getApiKey, setApiKey, clearApiKey } from '../../lib/gemini';
 import './Settings.css';
 
 export default function Settings() {
@@ -28,6 +29,11 @@ export default function Settings() {
   const [customColor, setCustomColor] = useState('#66BB6A');
   const [showThresholdEditor, setShowThresholdEditor] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
+  
+  // AI API key state
+  const [apiKeyInput, setApiKeyInput] = useState('');
+  const [showApiKey, setShowApiKey] = useState(false);
+  const [apiKeyStatus, setApiKeyStatus] = useState(hasApiKey() ? 'saved' : 'none');
   
   // Sync local state from user context
   useEffect(() => {
@@ -72,6 +78,24 @@ export default function Settings() {
     const theme = generateThemeFromSeed(color, false);
     applyTheme(theme);
     await updateTheme('custom', color);
+  };
+  
+  // AI API Key handlers
+  const handleSaveApiKey = () => {
+    if (!apiKeyInput.trim()) return;
+    setApiKey(apiKeyInput.trim());
+    setApiKeyStatus('saved');
+    setApiKeyInput('');
+    setShowApiKey(false);
+    alert("AI API key saved! Your dragon can now analyze meals. 🤖🔥");
+  };
+  
+  const handleClearApiKey = () => {
+    if (confirm("Remove your AI API key? Your dragon won't be able to analyze meals.")) {
+      clearApiKey();
+      setApiKeyStatus('none');
+      setApiKeyInput('');
+    }
   };
   
   const handleSaveChanges = async () => {
@@ -436,6 +460,63 @@ export default function Settings() {
             <span className="stat-label">Badges</span>
           </div>
         </div>
+      </section>
+      
+      {/* AI Integration Section */}
+      <section className="settings-section card">
+        <h2 className="section-title">🤖 Dragon's Intelligence</h2>
+        <p className="text-muted mb-md">
+          Connect your dragon to Google's AI to automatically analyze meals from text descriptions or photos.
+        </p>
+        
+        {apiKeyStatus === 'saved' ? (
+          <div className="api-key-status">
+            <div className="status-badge success">
+              <span>✅ AI Connected</span>
+            </div>
+            <p className="text-muted text-sm mt-sm">
+              Your dragon can analyze meals. Key stored locally on this device.
+            </p>
+            <button className="btn btn-secondary btn-danger-outline mt-sm" onClick={handleClearApiKey}>
+              🗑️ Remove API Key
+            </button>
+          </div>
+        ) : (
+          <div className="api-key-form">
+            <div className="form-group">
+              <label>Google AI Studio API Key</label>
+              <div className="input-with-toggle">
+                <input 
+                  type={showApiKey ? 'text' : 'password'}
+                  value={apiKeyInput}
+                  onChange={(e) => setApiKeyInput(e.target.value)}
+                  placeholder="AIza..."
+                  className="api-key-input"
+                />
+                <button 
+                  type="button" 
+                  className="toggle-visibility"
+                  onClick={() => setShowApiKey(!showApiKey)}
+                >
+                  {showApiKey ? '🙈' : '👁️'}
+                </button>
+              </div>
+              <p className="input-help">
+                Get your free key at{' '}
+                <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer">
+                  Google AI Studio ↗
+                </a>
+              </p>
+            </div>
+            <button 
+              className="btn btn-primary w-full"
+              onClick={handleSaveApiKey}
+              disabled={!apiKeyInput.trim()}
+            >
+              🔐 Save API Key
+            </button>
+          </div>
+        )}
       </section>
       
       {/* App Info */}

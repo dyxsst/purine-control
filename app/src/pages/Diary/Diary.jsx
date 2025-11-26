@@ -5,6 +5,7 @@ import EmberMascot, { getEmberState } from '../../components/EmberMascot/EmberMa
 import { useUser } from '../../contexts/UserContext';
 import { useMeals, useHydration, useStash } from '../../hooks/useData';
 import { getToday } from '../../lib/nutrition';
+import { hasApiKey, processFullMeal } from '../../lib/gemini';
 import './Diary.css';
 
 const MEAL_TYPES = [
@@ -44,6 +45,8 @@ export default function Diary() {
   const [selectedMealType, setSelectedMealType] = useState('breakfast');
   const [mealInput, setMealInput] = useState('');
   const [showAllNutrients, setShowAllNutrients] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [aiError, setAiError] = useState(null);
   
   // Edit modal state
   const [editingMeal, setEditingMeal] = useState(null);
@@ -94,20 +97,48 @@ export default function Diary() {
     e.preventDefault();
     if (!mealInput.trim()) return;
     
-    // For now, create a simple meal entry (AI parsing will come later)
-    // TODO: Integrate with AI for parsing
-    const newMeal = {
-      date: selectedDate,
-      meal_type: selectedMealType,
-      meal_name: mealInput,
-      ingredients: [],
-      total_nutrients: { calories: 0, purines: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, sodium: 0, sugar: 0 },
-      hydration_ml: 0,
-      analysis_method: 'manual',
-    };
+    setAiError(null);
     
-    await addMeal(newMeal);
-    setMealInput('');
+    // Check if AI is available
+    if (!hasApiKey()) {
+      // Fallback: Create simple meal entry without AI
+      const newMeal = {
+        date: selectedDate,
+        meal_type: selectedMealType,
+        meal_name: mealInput,
+        ingredients: [],
+        total_nutrients: { calories: 0, purines: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, sodium: 0, sugar: 0 },
+        hydration_ml: 0,
+        analysis_method: 'manual',
+      };
+      await addMeal(newMeal);
+      setMealInput('');
+      return;
+    }
+    
+    // Use AI to parse and analyze the meal
+    setIsProcessing(true);
+    try {
+      const { ingredients, totals } = await processFullMeal(mealInput);
+      
+      const newMeal = {
+        date: selectedDate,
+        meal_type: selectedMealType,
+        meal_name: mealInput,
+        ingredients: ingredients,
+        total_nutrients: totals,
+        hydration_ml: 0,
+        analysis_method: 'ai',
+      };
+      
+      await addMeal(newMeal);
+      setMealInput('');
+    } catch (error) {
+      console.error('AI parsing failed:', error);
+      setAiError(error.message || 'Failed to analyze meal. Try again or check your API key.');
+    } finally {
+      setIsProcessing(false);
+    }
   };
   
   const handleDeleteMeal = async (mealId) => {
@@ -230,14 +261,31 @@ export default function Diary() {
             placeholder="e.g., grilled chicken with rice..."
             value={mealInput}
             onChange={(e) => setMealInput(e.target.value)}
+            disabled={isProcessing}
           />
         </div>
+        {aiError && (
+          <div className="ai-error">
+            <span>⚠️ {aiError}</span>
+          </div>
+        )}
         <div className="input-actions">
-          <button type="button" className="btn btn-secondary">🎤</button>
-          <button type="button" className="btn btn-secondary">📸</button>
-          <button type="button" className="btn btn-secondary">🖼️</button>
-          <button type="submit" className="btn btn-primary btn-lg">Log It! 🎉</button>
+          <button type="button" className="btn btn-secondary" disabled={isProcessing}>🎤</button>
+          <button type="button" className="btn btn-secondary" disabled={isProcessing}>📸</button>
+          <button type="button" className="btn btn-secondary" disabled={isProcessing}>🖼️</button>
+          <button type="submit" className="btn btn-primary btn-lg" disabled={isProcessing || !mealInput.trim()}>
+            {isProcessing ? (
+              <>🔮 Analyzing...</>
+            ) : (
+              <>Log It! 🎉</>
+            )}
+          </button>
         </div>
+        {!hasApiKey() && (
+          <p className="no-api-hint text-muted text-sm">
+            💡 Set up AI in Settings → Dragon's Intelligence to auto-analyze meals!
+          </p>
+        )}
       </form>
       
       {/* Hydration Section */}

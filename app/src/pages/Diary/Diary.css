@@ -177,6 +177,24 @@
   flex: 1;
 }
 
+/* AI Error & Hint */
+.ai-error {
+  background: rgba(244, 67, 54, 0.15);
+  color: #F44336;
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-sm);
+  font-size: 0.875rem;
+}
+
+.no-api-hint {
+  text-align: center;
+  margin-top: var(--space-xs);
+}
+
+.text-sm {
+  font-size: 0.875rem;
+}
+
 /* Hydration Section */
 .hydration-section {
   display: flex;
