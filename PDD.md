@@ -278,8 +278,22 @@ Daily Needs = BMR × Activity Multiplier
   
   // For type='container'
   capacity_ml: number,
+  icon: string,             // Emoji icon for the container
   
+  use_count: number,
   created_at: timestamp,
+}
+```
+
+#### Hydration Collection (One record per day)
+```javascript
+{
+  id: string,
+  user_id: string,
+  date: string,            // YYYY-MM-DD
+  amount_ml: number,       // Total hydration for the day
+  created_at: timestamp,
+  updated_at: timestamp,
 }
 ```
 

@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { db } from '../lib/instantdb';
 import { useUser } from '../contexts/UserContext';
 
@@ -25,11 +26,16 @@ export function useMeals(date = null) {
   
   const meals = data?.meals || [];
   
-  // Sort meals by meal_type order
-  const mealOrder = { breakfast: 0, lunch: 1, dinner: 2, snack: 3, hydration: 4 };
-  const sortedMeals = [...meals].sort((a, b) => 
-    (mealOrder[a.meal_type] || 99) - (mealOrder[b.meal_type] || 99)
-  );
+  // Sort meals by meal_type order: breakfast → lunch → dinner → snack
+  // Using useMemo to ensure consistent sorting
+  const MEAL_ORDER = { breakfast: 1, lunch: 2, dinner: 3, snack: 4, hydration: 5 };
+  const sortedMeals = useMemo(() => {
+    return [...meals].sort((a, b) => {
+      const orderA = MEAL_ORDER[a.meal_type] || 99;
+      const orderB = MEAL_ORDER[b.meal_type] || 99;
+      return orderA - orderB;
+    });
+  }, [meals]);
 
   // Add a new meal
   const addMeal = async (mealData) => {
@@ -103,76 +109,63 @@ export function useMeals(date = null) {
 }
 
 // Hook for hydration tracking
+// Uses a single record per day instead of multiple entries
 export function useHydration(date = getToday()) {
   const { user } = useUser();
   const userId = user?.id;
   
-  // Query hydration entries for the date
+  // Query the single hydration record for this date
   const { isLoading, data } = db.useQuery(
     userId ? { 
-      meals: { 
-        $: { where: { user_id: userId, date, meal_type: 'hydration' } } 
+      hydration: { 
+        $: { where: { user_id: userId, date } } 
       } 
     } : null
   );
   
-  const hydrationEntries = data?.meals || [];
-  const totalHydration = hydrationEntries.reduce((sum, entry) => sum + (entry.hydration_ml || 0), 0);
+  const hydrationRecords = data?.hydration || [];
+  const hydrationRecord = hydrationRecords[0]; // Should only be one per day
+  const totalHydration = hydrationRecord?.amount_ml || 0;
 
-  // Add hydration
-  const addHydration = async (amount_ml) => {
+  // Set hydration to a specific value
+  const setHydration = async (amount_ml) => {
     if (!userId) return;
     
-    const entryId = crypto.randomUUID();
-    await db.transact([
-      db.tx.meals[entryId].update({
-        id: entryId,
-        user_id: userId,
-        date,
-        timestamp: Date.now(),
-        meal_type: 'hydration',
-        meal_name: `Water (+${amount_ml}ml)`,
-        ingredients: [],
-        total_nutrients: {},
-        hydration_ml: amount_ml,
-        image_urls: [],
-        analysis_method: 'manual',
-      }),
-    ]);
-  };
-
-  // Adjust hydration (can be negative)
-  const adjustHydration = async (amount_ml) => {
-    if (!userId) return;
-    
-    if (amount_ml > 0) {
-      await addHydration(amount_ml);
-    } else {
-      // For negative adjustments, create a negative entry
-      const entryId = crypto.randomUUID();
+    if (hydrationRecord) {
+      // Update existing record
       await db.transact([
-        db.tx.meals[entryId].update({
-          id: entryId,
+        db.tx.hydration[hydrationRecord.id].update({
+          amount_ml: Math.max(0, amount_ml),
+          updated_at: Date.now(),
+        }),
+      ]);
+    } else {
+      // Create new record for this day
+      const recordId = crypto.randomUUID();
+      await db.transact([
+        db.tx.hydration[recordId].update({
+          id: recordId,
           user_id: userId,
           date,
-          timestamp: Date.now(),
-          meal_type: 'hydration',
-          meal_name: `Water Adjustment (${amount_ml}ml)`,
-          ingredients: [],
-          total_nutrients: {},
-          hydration_ml: amount_ml,
-          image_urls: [],
-          analysis_method: 'manual',
+          amount_ml: Math.max(0, amount_ml),
+          created_at: Date.now(),
+          updated_at: Date.now(),
         }),
       ]);
     }
   };
 
+  // Adjust hydration by delta (can be negative)
+  const adjustHydration = async (delta_ml) => {
+    if (!userId) return;
+    const newAmount = Math.max(0, totalHydration + delta_ml);
+    await setHydration(newAmount);
+  };
+
   return {
-    totalHydration: Math.max(0, totalHydration),
-    hydrationEntries,
+    totalHydration,
     isLoading,
-    addHydration,
+    setHydration,
     adjustHydration,
   };
 }
