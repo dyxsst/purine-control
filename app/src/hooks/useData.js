@@ -12,6 +12,9 @@ export const getToday = () => {
   return `${year}-${month}-${day}`;
 };
 
+// Meal type ordering: breakfast → lunch → dinner → snack → hydration
+const MEAL_ORDER = { breakfast: 1, lunch: 2, dinner: 3, snack: 4, hydration: 5 };
+
 // Hook for meals data
 export function useMeals(date = null) {
   const { user } = useUser();
@@ -26,9 +29,7 @@ export function useMeals(date = null) {
   
   const meals = data?.meals || [];
   
-  // Sort meals by meal_type order: breakfast → lunch → dinner → snack
-  // Using useMemo to ensure consistent sorting
-  const MEAL_ORDER = { breakfast: 1, lunch: 2, dinner: 3, snack: 4, hydration: 5 };
+  // Sort meals by meal_type order using useMemo for stable reference
   const sortedMeals = useMemo(() => {
     return [...meals].sort((a, b) => {
       const orderA = MEAL_ORDER[a.meal_type] || 99;
