@@ -892,13 +892,16 @@ These are core features in the PDD that have NO implementation:
 - **Storage:** TBD for images
 
 ### AI Integration
-- **Provider:** Google Gemini
-- **Models:**
-  - `gemini-1.5-flash` - Text parsing, nutrition lookup (fast, cheap)
-  - `gemini-1.5-pro` - Complex recommendations, image analysis (higher quality)
-- **SDK:** `@google/generative-ai` (client-side) or REST API
-- **API Key:** User-provided or environment variable
-- **Rate Limits:** 15 RPM (free tier), 1000 RPM (paid)
+- **Provider:** Google Gemini (via Google Gen AI SDK)
+- **SDK:** `@google/genai` v1.30.0 (new unified SDK, replaces deprecated `@google/generative-ai`)
+- **Model:** `gemini-2.5-flash` - Fast, multimodal (text + images)
+- **API Key Management:** 
+  - User provides their own API key from [Google AI Studio](https://aistudio.google.com/apikey)
+  - Stored in browser's localStorage per device
+  - Key never leaves the user's device
+- **Rate Limits:** 
+  - Free tier: 15 requests per minute (RPM)
+  - Paid tier: 1000+ RPM
 
 ### Deployment
 - **Hosting:** GitHub Pages

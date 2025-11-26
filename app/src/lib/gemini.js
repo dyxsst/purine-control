@@ -1,29 +1,25 @@
-// Google Gemini AI Integration
+// Google Gen AI SDK Integration
+// Using @google/genai v1.30.0 (new unified SDK)
 // PDD Section 5.1: AI Prompts
 // PDD Section 4.2: Ingredient Consistency Engine
+//
+// SECURITY NOTE: API key is stored in localStorage on the user's device.
+// This is acceptable for a personal app where the user provides their own key.
+// For production apps with shared keys, use server-side implementation.
 
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenAI } from '@google/genai';
 
 // API Key management
-// In production, use environment variables or user-provided key
-let apiKey = null;
-let genAI = null;
+// Stored in localStorage per-device
+let ai = null;
 
 export function setApiKey(key) {
-  apiKey = key;
-  genAI = new GoogleGenerativeAI(key);
-  // Persist to localStorage for convenience (user can clear)
   localStorage.setItem('gemini_api_key', key);
+  ai = new GoogleGenAI({ apiKey: key });
 }
 
 export function getApiKey() {
-  if (!apiKey) {
-    apiKey = localStorage.getItem('gemini_api_key');
-    if (apiKey) {
-      genAI = new GoogleGenerativeAI(apiKey);
-    }
-  }
-  return apiKey;
+  return localStorage.getItem('gemini_api_key');
 }
 
 export function hasApiKey() {
@@ -31,19 +27,26 @@ export function hasApiKey() {
 }
 
 export function clearApiKey() {
-  apiKey = null;
-  genAI = null;
+  ai = null;
   localStorage.removeItem('gemini_api_key');
 }
 
-// Get model instance
-function getModel(modelName = 'gemini-1.5-flash') {
-  if (!genAI) {
+// Initialize AI client from stored key
+function getAI() {
+  if (!ai) {
     const key = getApiKey();
-    if (!key) throw new Error('Gemini API key not set');
-    genAI = new GoogleGenerativeAI(key);
+    if (!key) throw new Error('Gemini API key not set. Add your key in Settings.');
+    ai = new GoogleGenAI({ apiKey: key });
   }
-  return genAI.getGenerativeModel({ model: modelName });
+  return ai;
+}
+
+// Clean JSON response - remove markdown code blocks if present
+function cleanJsonResponse(text) {
+  return text
+    .replace(/```json\n?/g, '')
+    .replace(/```\n?/g, '')
+    .trim();
 }
 
 // ============================================
@@ -51,7 +54,7 @@ function getModel(modelName = 'gemini-1.5-flash') {
 // PDD Section 5.1
 // ============================================
 export async function parseMealDescription(userInput) {
-  const model = getModel('gemini-1.5-flash');
+  const client = getAI();
   
   const prompt = `Parse this meal description into structured ingredient data:
 
@@ -75,16 +78,16 @@ Rules:
 - If ambiguous, choose the most common interpretation`;
 
   try {
-    const result = await model.generateContent(prompt);
-    const text = result.response.text();
+    const response = await client.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: prompt,
+    });
     
-    // Clean response - remove markdown code blocks if present
-    const cleaned = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-    
-    return JSON.parse(cleaned);
+    const text = response.text;
+    return JSON.parse(cleanJsonResponse(text));
   } catch (error) {
     console.error('Failed to parse meal:', error);
-    throw new Error('Failed to parse meal description');
+    throw new Error(`Failed to parse meal: ${error.message}`);
   }
 }
 
@@ -93,7 +96,7 @@ Rules:
 // PDD Section 5.1
 // ============================================
 export async function getNutritionForIngredient(ingredientName) {
-  const model = getModel('gemini-1.5-flash');
+  const client = getAI();
   
   const prompt = `Estimate complete nutritional information per 100g for this ingredient:
 
@@ -119,15 +122,16 @@ All values in standard units:
 Use USDA database values when available. If uncertain, provide conservative estimates.`;
 
   try {
-    const result = await model.generateContent(prompt);
-    const text = result.response.text();
+    const response = await client.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: prompt,
+    });
     
-    const cleaned = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-    
-    return JSON.parse(cleaned);
+    const text = response.text;
+    return JSON.parse(cleanJsonResponse(text));
   } catch (error) {
     console.error('Failed to get nutrition:', error);
-    throw new Error('Failed to get nutrition data');
+    throw new Error(`Failed to get nutrition data: ${error.message}`);
   }
 }
 
@@ -136,7 +140,7 @@ Use USDA database values when available. If uncertain, provide conservative esti
 // PDD Section 5.1
 // ============================================
 export async function analyzeFoodPhoto(imageBase64, mimeType = 'image/jpeg') {
-  const model = getModel('gemini-1.5-pro'); // Use pro for vision
+  const client = getAI();
   
   const prompt = `Analyze this food image and identify all visible food items with estimated weights.
 
@@ -155,23 +159,24 @@ Return ONLY valid JSON with no markdown formatting:
 Provide gram estimates based on typical portion sizes.`;
 
   try {
-    const result = await model.generateContent([
-      prompt,
-      {
-        inlineData: {
-          data: imageBase64,
-          mimeType: mimeType,
+    const response = await client.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: [
+        { text: prompt },
+        {
+          inlineData: {
+            data: imageBase64,
+            mimeType: mimeType,
+          },
         },
-      },
-    ]);
+      ],
+    });
     
-    const text = result.response.text();
-    const cleaned = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-    
-    return JSON.parse(cleaned);
+    const text = response.text;
+    return JSON.parse(cleanJsonResponse(text));
   } catch (error) {
     console.error('Failed to analyze image:', error);
-    throw new Error('Failed to analyze food photo');
+    throw new Error(`Failed to analyze food photo: ${error.message}`);
   }
 }
 
@@ -187,7 +192,7 @@ export async function generateRecommendations({
   frequentIngredients = [],
   todaysMeals = [],
 }) {
-  const model = getModel('gemini-1.5-flash');
+  const client = getAI();
   
   const prompt = `Generate 3 ${mealType} meal recommendations.
 
@@ -223,15 +228,16 @@ Requirements:
 - ALL must stay within remaining budget`;
 
   try {
-    const result = await model.generateContent(prompt);
-    const text = result.response.text();
+    const response = await client.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: prompt,
+    });
     
-    const cleaned = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-    
-    return JSON.parse(cleaned);
+    const text = response.text;
+    return JSON.parse(cleanJsonResponse(text));
   } catch (error) {
     console.error('Failed to generate recommendations:', error);
-    throw new Error('Failed to generate recommendations');
+    throw new Error(`Failed to generate recommendations: ${error.message}`);
   }
 }
 
@@ -367,4 +373,21 @@ export function recalculateMealTotals(ingredients) {
     });
     return acc;
   }, {});
+}
+
+// ============================================
+// Test connection / validate API key
+// ============================================
+export async function testApiKey(key) {
+  try {
+    const testClient = new GoogleGenAI({ apiKey: key });
+    const response = await testClient.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: 'Say "OK" if you can read this.',
+    });
+    return response.text.toLowerCase().includes('ok');
+  } catch (error) {
+    console.error('API key test failed:', error);
+    return false;
+  }
 }
