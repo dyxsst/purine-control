@@ -726,73 +726,146 @@ async function analyzeImage(imageUrl) {
 
 ## 8. 🚀 IMPLEMENTATION PHASES
 
-### Phase 1: Foundation ✅ COMPLETE
+### Phase 1: Foundation 🔄 PARTIAL
+**UI Shell & Basic Infrastructure**
 - [x] Project setup (Vite + React)
 - [x] GitHub Pages deployment
 - [x] Theme engine implementation (Dragon Scale Shimmer)
 - [x] Navigation structure (bottom tab bar - 5 tabs)
 - [x] Base component library (Header, Card, ProgressBar, Button)
 - [x] EmberMascot component with state-based animations
-- [x] InstantDB integration (schema + hooks connected)
-- [ ] Authentication system (using local-user for now)
+- [x] InstantDB connection configured
+- [ ] **Authentication system** - Currently hardcoded `local-user` ID, no real auth
+- [ ] User registration/login flow
+- [ ] Session management
 
-### Phase 2: Meal Diary (Core) ✅ COMPLETE
+### Phase 2: Meal Diary (Core) 🔄 PARTIAL
+**Basic UI Complete, Core Logic Missing**
+
+#### ✅ UI Layer (Complete)
 - [x] Calendar ribbon component (week view, navigation, clickable days)
 - [x] Meal type selector (Breakfast, Lunch, Dinner, Snack)
-- [x] Text input for meal logging
-- [x] Meal cards display (real data from DB)
-- [x] Meal sorting (fixed order: Breakfast → Lunch → Dinner → Snack)
-- [x] Daily totals calculation (real-time from DB)
+- [x] Text input field for meal description
+- [x] Meal cards display with sorting (Breakfast → Lunch → Dinner → Snack)
 - [x] Daily status panel with all 9 nutrients
-- [x] Hydration tracking (dedicated collection, single record per day)
-- [x] Edit meal (modal with type change, name edit)
-- [x] Delete meal
-- [x] Save to Stash functionality
-- [ ] AI parsing integration
-- [ ] Ingredient consistency engine
-- [ ] Image upload/analysis
-- [ ] Voice input
+- [x] Hydration tracking UI (+/- buttons, bottle selection)
+- [x] Edit meal modal (name, type change)
+- [x] Delete meal button
+- [x] Save to Stash button
 
-### Phase 3: Dragon's Hoard (Stash) ✅ COMPLETE
+#### ❌ AI Parsing (Not Started)
+- [ ] **Text Input → AI Parsing** - Currently saves raw text as `meal_name`, no parsing
+- [ ] AI provider selection (OpenAI/Gemini)
+- [ ] API key management
+- [ ] Prompt implementation (Section 5.1)
+- [ ] Response parsing and validation
+- [ ] Error handling for AI failures
+
+#### ❌ Ingredient Consistency Engine (Not Started)
+- [ ] `normalizeIngredientName()` function (Section 4.2)
+- [ ] Ingredient Library cache lookups
+- [ ] Cache hit: use stored `nutrients_per_100g`
+- [ ] Cache miss: call AI, store result
+- [ ] `use_count` and `last_used` tracking
+- [ ] Unit conversion system (`convertToGrams()`)
+
+#### ❌ Local Recalculation (Not Started)
+- [ ] `recalculateIngredient()` for quantity edits (Section 4.3)
+- [ ] `multiplyNutrients()` helper function
+- [ ] Edit ingredient quantities without AI call
+- [ ] Recalculate `total_nutrients` from ingredient changes
+- [ ] Currently: edit only changes name/type, not nutrients
+
+#### ❌ Image Analysis (Not Started)
+- [ ] Image storage solution (Cloudinary/InstantDB blobs/Base64)
+- [ ] Camera/upload UI
+- [ ] Nutrition label detection
+- [ ] OCR integration
+- [ ] AI Vision analysis (food photos)
+- [ ] `image_urls` field usage
+
+#### ❌ Voice Input (Not Started)
+- [ ] Speech-to-text integration
+- [ ] Voice → text → AI parsing flow
+
+### Phase 3: Dragon's Hoard (Stash) 🔄 PARTIAL
+**Basic CRUD Complete, Integration Gaps**
+
+#### ✅ Complete
 - [x] Stash page with tabs (Meals, Bottles)
 - [x] Saved meals display
-- [x] Use saved meal (logs to diary, increments use_count)
+- [x] Custom bottle creation/edit/delete
 - [x] Default bottles (3 presets)
-- [x] Custom bottle creation
-- [x] Edit/Delete bottles
 - [x] Search functionality
-- [x] Edit saved meals (name only)
+- [x] Use saved meal (logs to diary)
 
-### Phase 4: Settings ✅ COMPLETE
+#### ❌ Missing
+- [ ] **Ingredient editing** - Can only edit meal name, not ingredients
+- [ ] Nutrient recalculation when editing saved meal
+- [ ] "Use from Stash" should use `analysis_method: 'custom_item'`
+- [ ] Custom ingredients tab (removed, but schema supports it)
+
+### Phase 4: Settings 🔄 PARTIAL
+**Profile Complete, Account Management Missing**
+
+#### ✅ Complete
 - [x] Profile section (name, sex, age, weight, height, activity)
 - [x] Dietary conditions (gout, kidney disease, diabetes)
 - [x] All nutrition thresholds display (9 nutrients)
 - [x] Editable thresholds mode
-- [x] Calculate recommendations button (smart calculations)
-- [x] Theme picker (3 presets: Emerald, Midnight, Crystal)
+- [x] Calculate recommendations button
+- [x] Theme picker (3 presets)
 - [x] User data persistence to InstantDB
-- [ ] Account management (export, delete)
 
-### Phase 5: Charts 🔄 IN PROGRESS
-- [x] Charts page shell created
+#### ❌ Missing
+- [ ] **Account creation** - No signup flow
+- [ ] **Login/logout** - No auth
+- [ ] Data export (JSON/CSV)
+- [ ] Account deletion
+- [ ] Multi-device sync (requires auth)
+
+### Phase 5: Charts ❌ NOT STARTED
+**Only Shell Exists**
+- [x] Charts page shell with placeholder
 - [ ] Recharts integration
-- [ ] Date range selection
-- [ ] Nutrient filters
-- [ ] Threshold lines
-- [ ] Data export
+- [ ] Query meals by date range
+- [ ] Daily/Weekly/Monthly grouping
+- [ ] Nutrient toggle filters
+- [ ] Threshold limit lines
+- [ ] Data export button
 
-### Phase 6: Oracle 🔄 IN PROGRESS
-- [x] Oracle page shell created
-- [ ] AI recommendation integration
-- [ ] Budget calculation display
-- [ ] "I Made This!" quick-log
-- [ ] Familiar/Twist/Wild recommendations
+### Phase 6: Oracle ❌ NOT STARTED
+**Only Shell Exists**
+- [x] Oracle page shell with placeholder
+- [ ] **AI recommendation integration** (Prompt 4 from Section 5.1)
+- [ ] Calculate remaining budget from today's meals
+- [ ] Frequent ingredients analysis
+- [ ] Three recommendation types: Familiar/Twist/Wild
+- [ ] "I Made This!" quick-log (add recommendation to diary)
+- [ ] "Tweak It" flow (modify before logging)
 
 ### Phase 7: Gamification ❌ NOT STARTED
-- [ ] Badge system implementation
-- [ ] Streak tracking
-- [ ] Achievement triggers
-- [ ] Trophy room display
+- [ ] Badge trigger system
+- [ ] Streak calculation logic
+- [ ] `stats` field updates on actions
+- [ ] Achievement notifications (confetti, Ember animation)
+- [ ] Trophy room in Settings
+
+---
+
+## 8.1 🚨 CRITICAL MISSING PIECES
+
+These are core features in the PDD that have NO implementation:
+
+| Feature | PDD Section | Current State |
+|---------|-------------|---------------|
+| **AI Meal Parsing** | 5.1 Prompt 1 | Text saved as-is, no parsing |
+| **Ingredient Library** | 3.2, 4.2 | Collection exists, no code uses it |
+| **Local Recalculation** | 4.3 | Edit only changes name, not nutrients |
+| **Nutrition per ingredient** | 3.2 Meals schema | `ingredients` array empty or just names |
+| **Authentication** | Implied | Hardcoded `local-user` |
+| **Image Upload** | 5.2 | No storage, no UI |
+| **Unit Conversion** | 4.2 | Not implemented |
 
 ---
 

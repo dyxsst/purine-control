@@ -267,49 +267,70 @@ These items need decisions before development can proceed:
 
 ## Current Implementation Status
 
-### ✅ COMPLETE
+> ⚠️ **HONEST ASSESSMENT (Nov 26, 2025):** Previous status updates incorrectly marked phases as "COMPLETE" when core logic was missing. This has been corrected.
+
+### What We Actually Have: UI Shell + Basic CRUD
+
+The app has a functional UI with database persistence, but **lacks the core intelligence layer** defined in the PDD:
+
+| Layer | Status | What's Missing |
+|-------|--------|----------------|
+| **UI Components** | ✅ Done | - |
+| **Database Connection** | ✅ Done | - |
+| **Basic CRUD** | ✅ Done | - |
+| **AI Parsing** | ❌ None | Entire Section 5.1 |
+| **Ingredient Cache** | ❌ None | Section 4.2 algorithm |
+| **Local Recalc** | ❌ None | Section 4.3 - edit quantities |
+| **Authentication** | ❌ None | Hardcoded `local-user` |
+| **Image Processing** | ❌ None | Section 5.2 strategy |
+
+### ✅ UI Layer Complete
 | Feature | Notes |
 |---------|-------|
 | Project setup (Vite + React) | React 19.2.0 + Vite 7.2.4 |
 | GitHub Pages deployment | Live at https://dyxsst.github.io/purine-control/ |
-| InstantDB integration | Schema implemented, hooks connected |
-| Theme engine (Dragon Scale Shimmer) | 3 presets working |
-| Navigation (5 tabs) | Diary, Charts, Stash, Oracle, Settings |
-| EmberMascot component | State-based animations |
+| Theme engine | 3 presets working |
+| Navigation (5 tabs) | All pages have shells |
+| EmberMascot component | State-based CSS animations |
 | Calendar ribbon | Week view with navigation |
-| Meal type selector | Breakfast, Lunch, Dinner, Snack |
-| Meal logging (text input) | Manual entry, saves to DB |
-| Meal display (sorted) | Fixed order: Breakfast → Lunch → Dinner → Snack |
-| Meal edit/delete | Edit modal with type change |
-| Save to Stash | From diary meal cards |
-| Use from Stash | Logs meal to diary |
-| Hydration tracking | Single record per day, +/- adjustments |
-| Daily totals calculation | Real-time from DB |
-| Daily status panel | All 9 nutrients with progress bars |
-| Settings profile | All fields editable, saves to DB |
-| Threshold calculation | Smart calculations based on profile |
-| Stash page | Saved Meals + Bottles tabs |
-| Default bottles | 3 preset + user custom |
-| User Context | Single-user auth with DB persistence |
+| Meal type selector | 4 buttons |
+| Meal cards display | Sorted by type |
+| Daily status panel | 9 nutrient progress bars |
+| Settings form | All profile fields |
+| Stash page | 2 tabs with CRUD |
 
-### 🔄 IN PROGRESS / PARTIAL
-| Feature | Status | Notes |
-|---------|--------|-------|
-| Charts page | Shell only | Recharts installed but not integrated |
-| Oracle page | Shell only | Awaiting AI integration |
-| Badge system | Not started | Schema defined, no triggers |
-| Statistics tracking | Partial | `use_count` works, streaks not implemented |
-
-### ❌ NOT STARTED
+### ✅ Database Layer Complete
 | Feature | Notes |
 |---------|-------|
-| AI parsing integration | No API connected |
-| Image upload/analysis | No storage solution chosen |
-| Voice input | Not implemented |
-| Ingredient consistency engine | Cache lookups not implemented |
-| Authentication | Using local-user ID |
-| Account management | No export/delete |
-| Nutrition label OCR | Not implemented |
+| InstantDB connection | Hooks working |
+| User persistence | Profile saves/loads |
+| Meals CRUD | Add/edit/delete working |
+| Hydration tracking | Single record per day |
+| Stash items | Meals + bottles |
+| Theme persistence | Saves to user record |
+
+### ❌ Intelligence Layer Missing
+| Feature | PDD Section | Current State |
+|---------|-------------|---------------|
+| **AI Meal Parsing** | 5.1 Prompt 1 | Text saved as `meal_name` with no parsing |
+| **Ingredient Extraction** | 5.1 | `ingredients` array is empty |
+| **Nutrition Lookup** | 5.1 Prompt 2 | `total_nutrients` manually entered or empty |
+| **Ingredient Library** | 3.2, 4.2 | Collection unused |
+| **Cache Lookups** | 4.2 | `normalizeIngredientName()` not implemented |
+| **Local Recalculation** | 4.3 | Edit changes name only, not nutrients |
+| **Unit Conversion** | 4.2 | `convertToGrams()` not implemented |
+| **Image Analysis** | 5.2 | No upload, no storage, no AI |
+| **Recommendations** | 5.1 Prompt 4 | Oracle page is empty shell |
+
+### ❌ Account Layer Missing
+| Feature | Notes |
+|---------|-------|
+| Authentication | Using hardcoded `local-user` ID |
+| User registration | None |
+| Login/logout | None |
+| Multi-device sync | Impossible without auth |
+| Data export | None |
+| Account deletion | None |
 
 ---
 
@@ -323,11 +344,17 @@ These items need decisions before development can proceed:
 - Base64 encoding (for small images only)
 
 ### PENDING-003: AI Provider
-**Status:** Still pending  
+**Status:** Still pending - **BLOCKING for core features**  
 **Options:** 
 - OpenAI (GPT-4 Vision)
 - Google Gemini
 - Both (with fallback)
+
+**This decision blocks:**
+- Meal text parsing
+- Ingredient nutrition lookup
+- Image analysis
+- Oracle recommendations
 
 ### PENDING-004: Authentication Method
 **Status:** Still pending  
@@ -346,6 +373,7 @@ These items need decisions before development can proceed:
 | 1.0 | Nov 25, 2025 | Initial | Document created with initial deviations |
 | 1.1 | Nov 25, 2025 | Update | Added DEV-005 through DEV-009, resolved PENDING-001, added implementation notes |
 | 1.2 | Nov 25, 2025 | Update | Added DEV-010, DEV-011, NOTE-005, NOTE-006; comprehensive status review |
+| 1.3 | Nov 26, 2025 | Correction | **Honest reassessment** - phases were incorrectly marked complete. UI layer done, intelligence layer missing. |
 
 ---
 
