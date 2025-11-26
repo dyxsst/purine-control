@@ -225,6 +225,118 @@ These items need decisions before development can proceed:
 **Resolution:** Created `parseLocalDate()` helper that splits YYYY-MM-DD and constructs local date  
 **Files Affected:** `app/src/pages/Diary/Diary.jsx`
 
+### NOTE-005: Hydration Storage Refactor
+**Date:** November 25, 2025  
+**Issue:** Original implementation created multiple `meals` entries with `meal_type='hydration'` for each +/- adjustment, causing database bloat  
+**Resolution:** Created dedicated `hydration` collection with single record per user per day; `amount_ml` field updated on each adjustment  
+**Files Affected:** `app/src/hooks/useData.js`, `PDD.md` (schema updated)
+
+### NOTE-006: Meal Sorting with useMemo
+**Date:** November 25, 2025  
+**Issue:** Meals were displaying in inconsistent order (breakfast showing last)  
+**Resolution:** Moved `MEAL_ORDER` constant outside hook, used `useMemo` for stable sorting reference  
+**Files Affected:** `app/src/hooks/useData.js`
+
+---
+
+### DEV-010: Stash Tab Restructure - Removed Ingredients Tab
+
+| Field | Value |
+|-------|-------|
+| **Date** | November 25, 2025 |
+| **Section** | Screen Specifications, Data Architecture |
+| **Original Spec** | Three tabs: Saved Meals, Custom Ingredients, Hydration Bottles |
+| **New Decision** | Two tabs only: Saved Meals, Bottles |
+| **Rationale** | PDD schema doesn't have a separate "ingredient" type in customItems - only 'meal' and 'container'. Custom ingredients would need schema changes. |
+| **Impact** | Stash page simplified; ingredient creation deferred to future phase |
+
+---
+
+### DEV-011: Saved Meal "Use" Button Implementation
+
+| Field | Value |
+|-------|-------|
+| **Date** | November 25, 2025 |
+| **Section** | Screen Specifications (Stash) |
+| **Original Spec** | Not explicitly defined how "Use" button works |
+| **New Decision** | "Use" logs the saved meal to today's diary as a snack (user can edit type), increments `use_count`, then navigates to diary |
+| **Rationale** | Quick way to re-log favorite meals; default to snack since user can change in diary edit modal |
+| **Impact** | Added `useMeals` hook to Stash page; Use button now functional |
+
+---
+
+## Current Implementation Status
+
+### ✅ COMPLETE
+| Feature | Notes |
+|---------|-------|
+| Project setup (Vite + React) | React 19.2.0 + Vite 7.2.4 |
+| GitHub Pages deployment | Live at https://dyxsst.github.io/purine-control/ |
+| InstantDB integration | Schema implemented, hooks connected |
+| Theme engine (Dragon Scale Shimmer) | 3 presets working |
+| Navigation (5 tabs) | Diary, Charts, Stash, Oracle, Settings |
+| EmberMascot component | State-based animations |
+| Calendar ribbon | Week view with navigation |
+| Meal type selector | Breakfast, Lunch, Dinner, Snack |
+| Meal logging (text input) | Manual entry, saves to DB |
+| Meal display (sorted) | Fixed order: Breakfast → Lunch → Dinner → Snack |
+| Meal edit/delete | Edit modal with type change |
+| Save to Stash | From diary meal cards |
+| Use from Stash | Logs meal to diary |
+| Hydration tracking | Single record per day, +/- adjustments |
+| Daily totals calculation | Real-time from DB |
+| Daily status panel | All 9 nutrients with progress bars |
+| Settings profile | All fields editable, saves to DB |
+| Threshold calculation | Smart calculations based on profile |
+| Stash page | Saved Meals + Bottles tabs |
+| Default bottles | 3 preset + user custom |
+| User Context | Single-user auth with DB persistence |
+
+### 🔄 IN PROGRESS / PARTIAL
+| Feature | Status | Notes |
+|---------|--------|-------|
+| Charts page | Shell only | Recharts installed but not integrated |
+| Oracle page | Shell only | Awaiting AI integration |
+| Badge system | Not started | Schema defined, no triggers |
+| Statistics tracking | Partial | `use_count` works, streaks not implemented |
+
+### ❌ NOT STARTED
+| Feature | Notes |
+|---------|-------|
+| AI parsing integration | No API connected |
+| Image upload/analysis | No storage solution chosen |
+| Voice input | Not implemented |
+| Ingredient consistency engine | Cache lookups not implemented |
+| Authentication | Using local-user ID |
+| Account management | No export/delete |
+| Nutrition label OCR | Not implemented |
+
+---
+
+## Pending Decisions
+
+### PENDING-002: Image Storage Solution
+**Status:** Still pending  
+**Options:** 
+- InstantDB blobs (if supported)
+- External service (Cloudinary, ImageKit)
+- Base64 encoding (for small images only)
+
+### PENDING-003: AI Provider
+**Status:** Still pending  
+**Options:** 
+- OpenAI (GPT-4 Vision)
+- Google Gemini
+- Both (with fallback)
+
+### PENDING-004: Authentication Method
+**Status:** Still pending  
+**Options:**
+- InstantDB built-in auth
+- OAuth providers (Google, GitHub)
+- Email/password
+- Magic links
+
 ---
 
 ## Version History
@@ -233,6 +345,7 @@ These items need decisions before development can proceed:
 |---------|------|--------|---------|
 | 1.0 | Nov 25, 2025 | Initial | Document created with initial deviations |
 | 1.1 | Nov 25, 2025 | Update | Added DEV-005 through DEV-009, resolved PENDING-001, added implementation notes |
+| 1.2 | Nov 25, 2025 | Update | Added DEV-010, DEV-011, NOTE-005, NOTE-006; comprehensive status review |
 
 ---
 

@@ -730,54 +730,69 @@ async function analyzeImage(imageUrl) {
 - [x] Project setup (Vite + React)
 - [x] GitHub Pages deployment
 - [x] Theme engine implementation (Dragon Scale Shimmer)
-- [x] Navigation structure (bottom tab bar)
+- [x] Navigation structure (bottom tab bar - 5 tabs)
 - [x] Base component library (Header, Card, ProgressBar, Button)
 - [x] EmberMascot component with state-based animations
-- [ ] InstantDB integration (schema ready, hooks not connected)
-- [ ] Authentication system
+- [x] InstantDB integration (schema + hooks connected)
+- [ ] Authentication system (using local-user for now)
 
-### Phase 2: Meal Diary (Core) 🔄 IN PROGRESS
+### Phase 2: Meal Diary (Core) ✅ COMPLETE
 - [x] Calendar ribbon component (week view, navigation, clickable days)
 - [x] Meal type selector (Breakfast, Lunch, Dinner, Snack)
-- [x] Text input placeholder
-- [x] Meal cards display (demo data)
-- [x] Daily totals calculation
-- [x] Daily status panel with all nutrients
-- [x] Hydration tracking (+250, +500, +750, -250 buttons)
+- [x] Text input for meal logging
+- [x] Meal cards display (real data from DB)
+- [x] Meal sorting (fixed order: Breakfast → Lunch → Dinner → Snack)
+- [x] Daily totals calculation (real-time from DB)
+- [x] Daily status panel with all 9 nutrients
+- [x] Hydration tracking (dedicated collection, single record per day)
+- [x] Edit meal (modal with type change, name edit)
+- [x] Delete meal
+- [x] Save to Stash functionality
 - [ ] AI parsing integration
 - [ ] Ingredient consistency engine
-- [ ] Edit meal (local recalc)
-- [ ] Delete meal
+- [ ] Image upload/analysis
+- [ ] Voice input
 
-### Phase 3: Dragon's Hoard (Stash) 🔄 IN PROGRESS
-- [x] Stash page with tabs (Meals, Ingredients, Bottles)
-- [x] Demo data for meals, ingredients, bottles
-- [x] Search bar placeholder
-- [ ] Add/Edit/Delete functionality
-- [ ] Use from stash in Diary
+### Phase 3: Dragon's Hoard (Stash) ✅ COMPLETE
+- [x] Stash page with tabs (Meals, Bottles)
+- [x] Saved meals display
+- [x] Use saved meal (logs to diary, increments use_count)
+- [x] Default bottles (3 presets)
+- [x] Custom bottle creation
+- [x] Edit/Delete bottles
+- [x] Search functionality
+- [x] Edit saved meals (name only)
 
-### Phase 4: Settings 🔄 IN PROGRESS
+### Phase 4: Settings ✅ COMPLETE
 - [x] Profile section (name, sex, age, weight, height, activity)
 - [x] Dietary conditions (gout, kidney disease, diabetes)
 - [x] All nutrition thresholds display (9 nutrients)
 - [x] Editable thresholds mode
 - [x] Calculate recommendations button (smart calculations)
 - [x] Theme picker (3 presets: Emerald, Midnight, Crystal)
-- [ ] Account management
-- [ ] Data export
+- [x] User data persistence to InstantDB
+- [ ] Account management (export, delete)
 
-### Phase 5: Charts (Placeholder)
+### Phase 5: Charts 🔄 IN PROGRESS
 - [x] Charts page shell created
 - [ ] Recharts integration
 - [ ] Date range selection
 - [ ] Nutrient filters
 - [ ] Threshold lines
+- [ ] Data export
 
-### Phase 6: Oracle (Placeholder)
+### Phase 6: Oracle 🔄 IN PROGRESS
 - [x] Oracle page shell created
 - [ ] AI recommendation integration
-- [ ] Budget calculation
+- [ ] Budget calculation display
 - [ ] "I Made This!" quick-log
+- [ ] Familiar/Twist/Wild recommendations
+
+### Phase 7: Gamification ❌ NOT STARTED
+- [ ] Badge system implementation
+- [ ] Streak tracking
+- [ ] Achievement triggers
+- [ ] Trophy room display
 
 ---
 
