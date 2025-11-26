@@ -50,8 +50,74 @@ function cleanJsonResponse(text) {
 }
 
 // ============================================
-// PROMPT 1: Parse meal description into ingredients
-// PDD Section 5.1
+// MAIN PROMPT: Parse meal AND get all nutrition in ONE call
+// This is the cost-efficient approach - single API call
+// ============================================
+export async function parseMealWithNutrition(userInput) {
+  const client = getAI();
+  
+  const prompt = `Analyze this meal and provide complete nutritional breakdown:
+
+"${userInput}"
+
+Return ONLY valid JSON with no markdown formatting:
+{
+  "meal_name": "short descriptive name (max 50 chars)",
+  "ingredients": [
+    {
+      "name": "ingredient name",
+      "quantity": number,
+      "unit": "g" | "ml" | "cup" | "tbsp" | "tsp" | "oz" | "slice" | "piece",
+      "grams": number,
+      "nutrients": {
+        "calories": number,
+        "purines": number,
+        "protein": number,
+        "carbs": number,
+        "fat": number,
+        "fiber": number,
+        "sodium": number,
+        "sugar": number
+      }
+    }
+  ],
+  "total_nutrients": {
+    "calories": number,
+    "purines": number,
+    "protein": number,
+    "carbs": number,
+    "fat": number,
+    "fiber": number,
+    "sodium": number,
+    "sugar": number
+  }
+}
+
+Rules:
+- Make reasonable portion estimates if not specified (e.g., "an egg" = 50g, "a glass of juice" = 250ml)
+- "grams" is the converted weight in grams for the specified quantity
+- "nutrients" are the values for THAT ingredient's quantity (not per 100g)
+- "total_nutrients" is the sum of all ingredients
+- Use USDA database values. For purines, use medical references (high purine foods: organ meats, sardines, anchovies ~300-800mg/100g; moderate: beef, pork ~100-200mg/100g; low: eggs, dairy, most vegetables ~0-50mg/100g)
+- All values: calories=kcal, purines/sodium=mg, all others=grams`;
+
+  try {
+    const response = await client.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: prompt,
+    });
+    
+    const text = response.text;
+    return JSON.parse(cleanJsonResponse(text));
+  } catch (error) {
+    console.error('Failed to analyze meal:', error);
+    throw new Error(`Failed to analyze meal: ${error.message}`);
+  }
+}
+
+// ============================================
+// LEGACY PROMPT 1: Parse meal description into ingredients
+// Kept for cases where we only need parsing
 // ============================================
 export async function parseMealDescription(userInput) {
   const client = getAI();
@@ -242,55 +308,27 @@ Requirements:
 }
 
 // ============================================
-// Helper: Process full meal (parse + get nutrition for each ingredient)
-// Combines Prompt 1 + Prompt 2 with caching
+// Helper: Process full meal - SINGLE API CALL
+// Uses parseMealWithNutrition for efficiency
 // ============================================
-export async function processFullMeal(userInput, ingredientCache = {}) {
-  // Step 1: Parse the meal description
-  const parsed = await parseMealDescription(userInput);
+export async function processFullMeal(userInput) {
+  // Single API call gets everything
+  const result = await parseMealWithNutrition(userInput);
   
-  // Step 2: Get nutrition for each ingredient (with cache check)
-  const ingredientsWithNutrition = await Promise.all(
-    parsed.ingredients.map(async (ingredient) => {
-      const normalizedName = normalizeIngredientName(ingredient.name);
-      
-      // Check cache first
-      let nutrientsPer100g;
-      if (ingredientCache[normalizedName]) {
-        nutrientsPer100g = ingredientCache[normalizedName];
-      } else {
-        // Cache miss - call AI
-        nutrientsPer100g = await getNutritionForIngredient(ingredient.name);
-      }
-      
-      // Calculate for specific quantity
-      const gramsAmount = convertToGrams(ingredient.quantity, ingredient.unit);
-      const conversionFactor = gramsAmount / 100;
-      const nutrientsPerUnit = multiplyNutrients(nutrientsPer100g, conversionFactor);
-      
-      return {
-        name: ingredient.name,
-        normalized_name: normalizedName,
-        quantity: ingredient.quantity,
-        unit: ingredient.unit,
-        nutrients_per_100g: nutrientsPer100g,
-        nutrients_per_unit: nutrientsPerUnit,
-      };
-    })
-  );
-  
-  // Step 3: Calculate total nutrients
-  const totalNutrients = ingredientsWithNutrition.reduce((acc, ing) => {
-    Object.keys(ing.nutrients_per_unit).forEach((key) => {
-      acc[key] = (acc[key] || 0) + ing.nutrients_per_unit[key];
-    });
-    return acc;
-  }, {});
+  // Normalize ingredient data structure for storage
+  const ingredients = result.ingredients.map((ing) => ({
+    name: ing.name,
+    normalized_name: normalizeIngredientName(ing.name),
+    quantity: ing.quantity,
+    unit: ing.unit,
+    grams: ing.grams,
+    nutrients_per_unit: ing.nutrients,
+  }));
   
   return {
-    meal_name: parsed.meal_name,
-    ingredients: ingredientsWithNutrition,
-    total_nutrients: totalNutrients,
+    meal_name: result.meal_name,
+    ingredients: ingredients,
+    total_nutrients: result.total_nutrients,
   };
 }
 
