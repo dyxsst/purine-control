@@ -316,14 +316,25 @@ export async function processFullMeal(userInput) {
   const result = await parseMealWithNutrition(userInput);
   
   // Normalize ingredient data structure for storage
-  const ingredients = result.ingredients.map((ing) => ({
-    name: ing.name,
-    normalized_name: normalizeIngredientName(ing.name),
-    quantity: ing.quantity,
-    unit: ing.unit,
-    grams: ing.grams,
-    nutrients_per_unit: ing.nutrients,
-  }));
+  // IMPORTANT: Calculate nutrients_per_100g for local recalculation (PDD 4.3)
+  const ingredients = result.ingredients.map((ing) => {
+    const grams = ing.grams || 100; // fallback if not provided
+    
+    // Calculate per-100g values from the per-quantity values
+    // This enables local recalculation without AI calls
+    const scaleFactor = 100 / grams;
+    const nutrientsPer100g = multiplyNutrients(ing.nutrients, scaleFactor);
+    
+    return {
+      name: ing.name,
+      normalized_name: normalizeIngredientName(ing.name),
+      quantity: ing.quantity,
+      unit: ing.unit,
+      grams: grams,
+      nutrients_per_100g: nutrientsPer100g,  // For local recalc
+      nutrients_per_unit: ing.nutrients,      // For display
+    };
+  });
   
   return {
     meal_name: result.meal_name,
@@ -391,15 +402,37 @@ export function multiplyNutrients(nutrients, factor) {
   return result;
 }
 
+// Recalculate when only quantity changes (same unit)
+// Uses ratio for efficiency
 export function recalculateIngredient(storedIngredient, newQuantity) {
   const ratio = newQuantity / storedIngredient.quantity;
+  const newGrams = storedIngredient.grams * ratio;
   
   return {
     ...storedIngredient,
     quantity: newQuantity,
+    grams: newGrams,
     nutrients_per_unit: multiplyNutrients(
       storedIngredient.nutrients_per_unit,
       ratio
+    ),
+  };
+}
+
+// Recalculate when quantity AND/OR unit changes
+// Uses nutrients_per_100g as base for accurate calculation
+export function recalculateIngredientFull(storedIngredient, newQuantity, newUnit) {
+  const newGrams = convertToGrams(newQuantity, newUnit);
+  const scaleFactor = newGrams / 100;
+  
+  return {
+    ...storedIngredient,
+    quantity: newQuantity,
+    unit: newUnit,
+    grams: newGrams,
+    nutrients_per_unit: multiplyNutrients(
+      storedIngredient.nutrients_per_100g,
+      scaleFactor
     ),
   };
 }
