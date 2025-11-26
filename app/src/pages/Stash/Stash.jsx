@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import Header from '../../components/Header/Header';
-import { useStash } from '../../hooks/useData';
-import { useHydration } from '../../hooks/useData';
+import { useStash, useHydration, useMeals } from '../../hooks/useData';
 import './Stash.css';
 
 // Default bottles if none saved
@@ -40,6 +39,7 @@ export default function Stash() {
   // Use real data hooks
   const { savedMeals, bottles: userBottles, isLoading, addToStash, removeFromStash, updateStashItem } = useStash();
   const { adjustHydration } = useHydration();
+  const { addMeal } = useMeals();
   
   // Always show default bottles + user's custom bottles
   const allBottles = [...DEFAULT_BOTTLES, ...userBottles];
@@ -53,6 +53,24 @@ export default function Stash() {
     const amount = bottle.capacity_ml || bottle.amount_ml;
     await adjustHydration(amount);
     alert(`Added ${amount}ml to hydration! 💧`);
+  };
+  
+  // Use a saved meal - logs it to today's diary
+  const handleUseMeal = async (meal) => {
+    await addMeal({
+      meal_type: 'snack', // Default to snack, user can edit in diary
+      meal_name: meal.name,
+      ingredients: meal.ingredients || [],
+      total_nutrients: meal.total_nutrients || {},
+    });
+    
+    // Increment use count
+    if (meal.id && !meal.id.startsWith('default-')) {
+      await updateStashItem(meal.id, { use_count: (meal.use_count || 0) + 1 });
+    }
+    
+    alert(`${meal.name} added to diary! 🐉`);
+    navigate('/');
   };
   
   const handleDeleteItem = async (itemId) => {
@@ -210,7 +228,7 @@ export default function Stash() {
                     <span>💪 {meal.total_nutrients?.protein || 0}g</span>
                   </div>
                   <div className="stash-item-actions">
-                    <button className="btn btn-primary btn-sm">📝 Use</button>
+                    <button className="btn btn-primary btn-sm" onClick={() => handleUseMeal(meal)}>📝 Use</button>
                     <button className="btn btn-secondary btn-sm" onClick={() => handleEditItem(meal)}>✏️ Edit</button>
                     <button className="btn btn-secondary btn-sm" onClick={() => handleDeleteItem(meal.id)}>🗑️</button>
                   </div>
