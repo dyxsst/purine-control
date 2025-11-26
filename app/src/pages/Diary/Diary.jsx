@@ -494,7 +494,7 @@ export default function Diary() {
                           {meal.ingredients.map((ing, i) => (
                             <li key={i}>
                               <span className="ing-name">• {ing.name}</span>
-                              <span className="ing-qty">({ing.quantity}{ing.unit})</span>
+                              <span className="ing-qty">({ing.quantity || '?'}{ing.unit || 'g'})</span>
                               <span className="ing-nutrients">
                                 🔥{Math.round(ing.nutrients_per_unit?.calories || 0)} · 🧬{Math.round(ing.nutrients_per_unit?.purines || 0)}
                               </span>
@@ -502,8 +502,13 @@ export default function Diary() {
                           ))}
                         </ul>
                         <button 
-                          className="btn btn-link btn-edit-ingredients"
-                          onClick={() => handleEditIngredients(meal)}
+                          type="button"
+                          className="btn btn-secondary btn-sm btn-edit-ingredients"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            handleEditIngredients(meal);
+                          }}
                         >
                           ✏️ Edit quantities
                         </button>

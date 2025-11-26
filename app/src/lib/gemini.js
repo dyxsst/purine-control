@@ -405,15 +405,17 @@ export function multiplyNutrients(nutrients, factor) {
 // Recalculate when only quantity changes (same unit)
 // Uses ratio for efficiency
 export function recalculateIngredient(storedIngredient, newQuantity) {
-  const ratio = newQuantity / storedIngredient.quantity;
-  const newGrams = storedIngredient.grams * ratio;
+  // Handle case where quantity is 0 or undefined
+  const oldQuantity = storedIngredient.quantity || 1;
+  const ratio = newQuantity / oldQuantity;
+  const newGrams = (storedIngredient.grams || 100) * ratio;
   
   return {
     ...storedIngredient,
     quantity: newQuantity,
     grams: newGrams,
     nutrients_per_unit: multiplyNutrients(
-      storedIngredient.nutrients_per_unit,
+      storedIngredient.nutrients_per_unit || {},
       ratio
     ),
   };

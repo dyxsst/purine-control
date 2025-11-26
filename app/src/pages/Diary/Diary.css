@@ -342,16 +342,12 @@
 .btn-edit-ingredients {
   font-size: 0.75rem;
   color: var(--color-primary);
-  padding: var(--space-xs) 0;
-  background: none;
-  border: none;
-  cursor: pointer;
-  opacity: 0.7;
+  margin-top: var(--space-xs);
 }
 
 .btn-edit-ingredients:hover {
-  opacity: 1;
-  text-decoration: underline;
+  background: var(--color-primary);
+  color: white;
 }
 
 .ingredients-edit-mode {
