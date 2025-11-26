@@ -18,6 +18,8 @@ const TABS = [
   { key: 'bottles', label: '🍶 Bottles', icon: '🍶' },
 ];
 
+const BOTTLE_ICONS = ['🥛', '🍶', '🏆', '🧃', '☕', '🫖', '🍵', '🥤'];
+
 export default function Stash() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -26,8 +28,18 @@ export default function Stash() {
   const [activeTab, setActiveTab] = useState(initialTab);
   const [searchQuery, setSearchQuery] = useState('');
   
+  // Modal states
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [editingItem, setEditingItem] = useState(null);
+  
+  // Form states
+  const [formName, setFormName] = useState('');
+  const [formIcon, setFormIcon] = useState('🥛');
+  const [formCapacity, setFormCapacity] = useState(250);
+  const [formNutrients, setFormNutrients] = useState({ calories: 0, purines: 0, protein: 0, carbs: 0, fat: 0 });
+  
   // Use real data hooks
-  const { savedMeals, customIngredients, bottles: userBottles, isLoading, addToStash, removeFromStash } = useStash();
+  const { savedMeals, customIngredients, bottles: userBottles, isLoading, addToStash, removeFromStash, updateStashItem } = useStash();
   const { adjustHydration } = useHydration();
   
   // Combine default bottles with user bottles
@@ -48,6 +60,69 @@ export default function Stash() {
     if (confirm('Remove this item from your hoard?')) {
       await removeFromStash(itemId);
     }
+  };
+  
+  // Reset form
+  const resetForm = () => {
+    setFormName('');
+    setFormIcon('🥛');
+    setFormCapacity(250);
+    setFormNutrients({ calories: 0, purines: 0, protein: 0, carbs: 0, fat: 0 });
+    setEditingItem(null);
+    setShowCreateModal(false);
+  };
+  
+  // Open create modal
+  const handleOpenCreate = () => {
+    resetForm();
+    setShowCreateModal(true);
+  };
+  
+  // Open edit modal
+  const handleEditItem = (item) => {
+    setEditingItem(item);
+    setFormName(item.name || '');
+    setFormIcon(item.icon || '🥛');
+    setFormCapacity(item.capacity_ml || item.amount_ml || 250);
+    setFormNutrients(item.nutrients || item.total_nutrients || { calories: 0, purines: 0, protein: 0, carbs: 0, fat: 0 });
+    setShowCreateModal(true);
+  };
+  
+  // Save item (create or update)
+  const handleSaveItem = async () => {
+    if (!formName.trim()) {
+      alert('Please enter a name');
+      return;
+    }
+    
+    if (editingItem) {
+      // Update existing item
+      await updateStashItem(editingItem.id, {
+        name: formName,
+        icon: formIcon,
+        capacity_ml: activeTab === 'bottles' ? formCapacity : undefined,
+        nutrients: activeTab === 'ingredients' ? formNutrients : undefined,
+        total_nutrients: activeTab === 'ingredients' ? formNutrients : undefined,
+      });
+      alert('Item updated! ✨');
+    } else {
+      // Create new item
+      const itemType = activeTab === 'meals' ? 'meal' : activeTab === 'ingredients' ? 'ingredient' : 'container';
+      const newItem = {
+        type: itemType,
+        name: formName,
+        icon: formIcon,
+        capacity_ml: itemType === 'container' ? formCapacity : undefined,
+        ingredients: itemType === 'meal' ? [] : undefined,
+        total_nutrients: itemType !== 'container' ? formNutrients : undefined,
+        nutrients: itemType === 'ingredient' ? formNutrients : undefined,
+        use_count: 0,
+      };
+      await addToStash(newItem);
+      alert('Added to your hoard! 🐉');
+    }
+    
+    resetForm();
   };
   
   const filteredMeals = savedMeals.filter(meal => 
@@ -134,7 +209,7 @@ export default function Stash() {
                   </div>
                   <div className="stash-item-actions">
                     <button className="btn btn-primary btn-sm">📝 Use</button>
-                    <button className="btn btn-secondary btn-sm">✏️ Edit</button>
+                    <button className="btn btn-secondary btn-sm" onClick={() => handleEditItem(meal)}>✏️ Edit</button>
                     <button className="btn btn-secondary btn-sm" onClick={() => handleDeleteItem(meal.id)}>🗑️</button>
                   </div>
                 </div>
@@ -142,7 +217,7 @@ export default function Stash() {
             </div>
           )}
           
-          <button className="btn btn-secondary w-full mt-md">
+          <button className="btn btn-secondary w-full mt-md" onClick={handleOpenCreate}>
             ➕ Create New Meal
           </button>
         </section>
@@ -171,7 +246,7 @@ export default function Stash() {
                     <span>🧈 {ing.nutrients?.fat || ing.total_nutrients?.fat || 0}g</span>
                   </div>
                   <div className="stash-item-actions">
-                    <button className="btn btn-secondary btn-sm">✏️ Edit</button>
+                    <button className="btn btn-secondary btn-sm" onClick={() => handleEditItem(ing)}>✏️ Edit</button>
                     <button className="btn btn-secondary btn-sm" onClick={() => handleDeleteItem(ing.id)}>🗑️</button>
                   </div>
                 </div>
@@ -179,7 +254,7 @@ export default function Stash() {
             </div>
           )}
           
-          <button className="btn btn-secondary w-full mt-md">
+          <button className="btn btn-secondary w-full mt-md" onClick={handleOpenCreate}>
             ➕ Add Custom Ingredient
           </button>
         </section>
@@ -207,7 +282,7 @@ export default function Stash() {
                   </div>
                   <div className="stash-item-actions">
                     <button className="btn btn-primary btn-sm" onClick={() => handleUseBottle(bottle)}>💧 Use</button>
-                    <button className="btn btn-secondary btn-sm">✏️</button>
+                    <button className="btn btn-secondary btn-sm" onClick={() => handleEditItem(bottle)}>✏️</button>
                     {!bottle.id.startsWith('default-') && (
                       <button className="btn btn-secondary btn-sm" onClick={() => handleDeleteItem(bottle.id)}>🗑️</button>
                     )}
@@ -217,10 +292,121 @@ export default function Stash() {
             </div>
           )}
           
-          <button className="btn btn-secondary w-full mt-md">
+          <button className="btn btn-secondary w-full mt-md" onClick={handleOpenCreate}>
             ➕ Add Custom Bottle
           </button>
         </section>
+      )}
+      
+      {/* Create/Edit Modal */}
+      {showCreateModal && (
+        <div className="modal-overlay" onClick={resetForm}>
+          <div className="modal-content card" onClick={(e) => e.stopPropagation()}>
+            <h2>
+              {editingItem ? '✏️ Edit' : '➕ Create'} {activeTab === 'meals' ? 'Meal' : activeTab === 'ingredients' ? 'Ingredient' : 'Bottle'}
+            </h2>
+            
+            <div className="form-group">
+              <label>Name</label>
+              <input
+                type="text"
+                value={formName}
+                onChange={(e) => setFormName(e.target.value)}
+                placeholder={`e.g., ${activeTab === 'meals' ? 'Chicken Salad' : activeTab === 'ingredients' ? 'Olive Oil' : 'Sports Bottle'}`}
+              />
+            </div>
+            
+            {activeTab === 'bottles' && (
+              <>
+                <div className="form-group">
+                  <label>Icon</label>
+                  <div className="icon-picker">
+                    {BOTTLE_ICONS.map(icon => (
+                      <button
+                        key={icon}
+                        type="button"
+                        className={`icon-btn ${formIcon === icon ? 'active' : ''}`}
+                        onClick={() => setFormIcon(icon)}
+                      >
+                        {icon}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="form-group">
+                  <label>Capacity (ml)</label>
+                  <input
+                    type="number"
+                    value={formCapacity}
+                    onChange={(e) => setFormCapacity(parseInt(e.target.value) || 0)}
+                    min="0"
+                    step="50"
+                  />
+                </div>
+              </>
+            )}
+            
+            {activeTab === 'ingredients' && (
+              <div className="nutrients-form">
+                <label>Nutrients (per 100g)</label>
+                <div className="nutrient-inputs">
+                  <div className="form-group-inline">
+                    <span>🔥</span>
+                    <input
+                      type="number"
+                      value={formNutrients.calories}
+                      onChange={(e) => setFormNutrients({ ...formNutrients, calories: parseFloat(e.target.value) || 0 })}
+                      placeholder="cal"
+                    />
+                  </div>
+                  <div className="form-group-inline">
+                    <span>🧬</span>
+                    <input
+                      type="number"
+                      value={formNutrients.purines}
+                      onChange={(e) => setFormNutrients({ ...formNutrients, purines: parseFloat(e.target.value) || 0 })}
+                      placeholder="mg"
+                    />
+                  </div>
+                  <div className="form-group-inline">
+                    <span>💪</span>
+                    <input
+                      type="number"
+                      value={formNutrients.protein}
+                      onChange={(e) => setFormNutrients({ ...formNutrients, protein: parseFloat(e.target.value) || 0 })}
+                      placeholder="g"
+                    />
+                  </div>
+                  <div className="form-group-inline">
+                    <span>🍞</span>
+                    <input
+                      type="number"
+                      value={formNutrients.carbs}
+                      onChange={(e) => setFormNutrients({ ...formNutrients, carbs: parseFloat(e.target.value) || 0 })}
+                      placeholder="g"
+                    />
+                  </div>
+                  <div className="form-group-inline">
+                    <span>🧈</span>
+                    <input
+                      type="number"
+                      value={formNutrients.fat}
+                      onChange={(e) => setFormNutrients({ ...formNutrients, fat: parseFloat(e.target.value) || 0 })}
+                      placeholder="g"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            <div className="modal-actions">
+              <button className="btn btn-secondary" onClick={resetForm}>Cancel</button>
+              <button className="btn btn-primary" onClick={handleSaveItem}>
+                💾 {editingItem ? 'Update' : 'Save'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

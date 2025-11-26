@@ -3,7 +3,7 @@ import Header from '../../components/Header/Header';
 import NutrientProgress from '../../components/ProgressBar/ProgressBar';
 import EmberMascot, { getEmberState } from '../../components/EmberMascot/EmberMascot';
 import { useUser } from '../../contexts/UserContext';
-import { useMeals, useHydration } from '../../hooks/useData';
+import { useMeals, useHydration, useStash } from '../../hooks/useData';
 import { getToday } from '../../lib/nutrition';
 import './Diary.css';
 
@@ -45,9 +45,15 @@ export default function Diary() {
   const [mealInput, setMealInput] = useState('');
   const [showAllNutrients, setShowAllNutrients] = useState(false);
   
+  // Edit modal state
+  const [editingMeal, setEditingMeal] = useState(null);
+  const [editMealName, setEditMealName] = useState('');
+  const [editMealType, setEditMealType] = useState('snack');
+  
   // Use real data hooks
-  const { meals, isLoading: mealsLoading, addMeal, deleteMeal, getDailyTotals } = useMeals(selectedDate);
+  const { meals, isLoading: mealsLoading, addMeal, updateMeal, deleteMeal, getDailyTotals } = useMeals(selectedDate);
   const { totalHydration, adjustHydration, isLoading: hydrationLoading } = useHydration(selectedDate);
+  const { addToStash } = useStash();
   
   const calendarDays = getCalendarDays(calendarCenter);
   const thresholds = user?.thresholds || {};
@@ -101,6 +107,44 @@ export default function Diary() {
     if (confirm('Delete this meal?')) {
       await deleteMeal(mealId);
     }
+  };
+  
+  // Open edit modal
+  const handleEditMeal = (meal) => {
+    setEditingMeal(meal);
+    setEditMealName(meal.meal_name);
+    setEditMealType(meal.meal_type);
+  };
+  
+  // Save edited meal
+  const handleSaveEdit = async () => {
+    if (!editingMeal) return;
+    
+    await updateMeal(editingMeal.id, {
+      meal_name: editMealName,
+      meal_type: editMealType,
+    });
+    
+    setEditingMeal(null);
+  };
+  
+  // Cancel edit
+  const handleCancelEdit = () => {
+    setEditingMeal(null);
+    setEditMealName('');
+    setEditMealType('snack');
+  };
+  
+  // Save meal to stash
+  const handleSaveToStash = async (meal) => {
+    await addToStash({
+      type: 'meal',
+      name: meal.meal_name,
+      ingredients: meal.ingredients || [],
+      total_nutrients: meal.total_nutrients || {},
+      use_count: 0,
+    });
+    alert(`"${meal.meal_name}" saved to your Dragon's Hoard! 📚`);
   };
   
   // Parse YYYY-MM-DD string to local date for display
@@ -241,9 +285,9 @@ export default function Diary() {
                   <span>🧬 {meal.total_nutrients?.purines || 0}mg purines</span>
                 </div>
                 <div className="meal-actions">
-                  <button className="btn btn-secondary">✏️ Edit</button>
+                  <button className="btn btn-secondary" onClick={() => handleEditMeal(meal)}>✏️ Edit</button>
                   <button className="btn btn-secondary" onClick={() => handleDeleteMeal(meal.id)}>🗑️</button>
-                  <button className="btn btn-secondary">📚 Stash</button>
+                  <button className="btn btn-secondary" onClick={() => handleSaveToStash(meal)}>📚 Stash</button>
                 </div>
               </div>
             ))}
@@ -286,6 +330,36 @@ export default function Diary() {
           </div>
         )}
       </section>
+      
+      {/* Edit Meal Modal */}
+      {editingMeal && (
+        <div className="modal-overlay" onClick={handleCancelEdit}>
+          <div className="modal-content card" onClick={(e) => e.stopPropagation()}>
+            <h2>✏️ Edit Meal</h2>
+            <div className="form-group">
+              <label>Meal Name</label>
+              <input
+                type="text"
+                value={editMealName}
+                onChange={(e) => setEditMealName(e.target.value)}
+                placeholder="e.g., Grilled Chicken"
+              />
+            </div>
+            <div className="form-group">
+              <label>Meal Type</label>
+              <select value={editMealType} onChange={(e) => setEditMealType(e.target.value)}>
+                {MEAL_TYPES.map(type => (
+                  <option key={type.key} value={type.key}>{type.icon} {type.label}</option>
+                ))}
+              </select>
+            </div>
+            <div className="modal-actions">
+              <button className="btn btn-secondary" onClick={handleCancelEdit}>Cancel</button>
+              <button className="btn btn-primary" onClick={handleSaveEdit}>💾 Save</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

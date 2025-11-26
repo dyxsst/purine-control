@@ -143,20 +143,27 @@ export function UserProvider({ children }) {
   };
 
   // Create or update user in database
-  const saveUser = async () => {
+  // Can pass explicit data to save (to avoid stale closure issues)
+  const saveUser = async (dataToSave = null) => {
+    const userData = dataToSave || user;
+    
     if (user.id === 'local-user') {
       // Create new user
       const newId = crypto.randomUUID();
-      const newUser = { ...user, id: newId };
+      const newUser = { 
+        ...userData, 
+        id: newId,
+      };
       
       await db.transact([
         db.tx.users[newId].update({
+          id: newId,
           name: newUser.name,
           profile: newUser.profile,
           thresholds: newUser.thresholds,
           theme: newUser.theme,
-          badges: newUser.badges,
-          stats: newUser.stats,
+          badges: newUser.badges || [],
+          stats: newUser.stats || {},
           created_at: Date.now(),
         }),
       ]);
@@ -168,10 +175,10 @@ export function UserProvider({ children }) {
       // Update existing user
       await db.transact([
         db.tx.users[user.id].update({
-          name: user.name,
-          profile: user.profile,
-          thresholds: user.thresholds,
-          theme: user.theme,
+          name: userData.name,
+          profile: userData.profile,
+          thresholds: userData.thresholds,
+          theme: userData.theme,
           updated_at: Date.now(),
         }),
       ]);

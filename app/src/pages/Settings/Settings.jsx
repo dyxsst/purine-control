@@ -75,9 +75,28 @@ export default function Settings() {
   };
   
   const handleSaveChanges = async () => {
-    await updateProfile(profile);
+    // Build the complete user data to save
+    const userData = {
+      ...user,
+      name: profile.name,
+      profile: {
+        sex: profile.sex,
+        age: profile.age,
+        weight_kg: profile.weight_kg,
+        height_cm: profile.height_cm,
+        activity_level: profile.activity_level,
+        dietary_conditions: profile.dietary_conditions,
+      },
+      thresholds: thresholds,
+    };
+    
+    // Update local state in context
+    await updateProfile(userData.profile);
     await updateThresholds(thresholds);
-    await saveUser();
+    
+    // Save to database with explicit data (avoids stale closure)
+    await saveUser(userData);
+    
     setHasChanges(false);
     alert("Dragon's settings saved! 🐉✨");
   };
