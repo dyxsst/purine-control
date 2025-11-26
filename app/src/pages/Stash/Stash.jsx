@@ -99,12 +99,18 @@ export default function Stash() {
     
     if (editingItem && !isDefaultItem) {
       // Update existing user-created item
-      await updateStashItem(editingItem.id, {
-        name: formName,
-        icon: formIcon,
-        capacity_ml: activeTab === 'bottles' ? formCapacity : undefined,
-        total_nutrients: activeTab === 'meals' ? formNutrients : undefined,
-      });
+      // Only include fields relevant to the item type
+      const updates = { name: formName };
+      
+      if (activeTab === 'bottles') {
+        updates.icon = formIcon;
+        updates.capacity_ml = formCapacity;
+      } else if (activeTab === 'meals') {
+        // Keep existing nutrients, just update name
+        // (ingredients editing would require a more complex form)
+      }
+      
+      await updateStashItem(editingItem.id, updates);
       alert('Item updated! ✨');
     } else {
       // Create new item (or create based on default)
