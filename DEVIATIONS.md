@@ -343,18 +343,24 @@ The app has a functional UI with database persistence, but **lacks the core inte
 - External service (Cloudinary, ImageKit)
 - Base64 encoding (for small images only)
 
-### PENDING-003: AI Provider
-**Status:** Still pending - **BLOCKING for core features**  
-**Options:** 
-- OpenAI (GPT-4 Vision)
-- Google Gemini
-- Both (with fallback)
+### ~~PENDING-003: AI Provider~~ → RESOLVED
+**Decision:** Google Gemini  
+**Date:** November 26, 2025  
+**Models:**
+- `gemini-1.5-flash` for text parsing and nutrition lookup (fast, cost-effective)
+- `gemini-1.5-pro` for image analysis and complex recommendations
 
-**This decision blocks:**
-- Meal text parsing
-- Ingredient nutrition lookup
-- Image analysis
-- Oracle recommendations
+**Rationale:**
+- Generous free tier (15 RPM)
+- Vision capabilities built-in
+- Good JSON output support
+- Competitive pricing for production
+
+**Unblocks:**
+- Meal text parsing (Section 5.1 Prompt 1)
+- Ingredient nutrition lookup (Section 5.1 Prompt 2)
+- Image analysis (Section 5.2)
+- Oracle recommendations (Section 5.1 Prompt 4)
 
 ### PENDING-004: Authentication Method
 **Status:** Still pending  

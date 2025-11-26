@@ -1,12 +1,13 @@
 # Purine Control - Product Design Document
 ## "The Dragon Keeper's Nutrition Tracker"
 
-**Version:** 1.1  
+**Version:** 1.2  
 **Date:** November 25, 2025  
-**Last Updated:** November 25, 2025  
+**Last Updated:** November 26, 2025  
 **Repository:** https://github.com/dyxsst/purine-control  
 **Live Demo:** https://dyxsst.github.io/purine-control/  
-**Database:** InstantDB (App ID: fb13a3d0-35ab-493b-9aa6-64a77363fe93)
+**Database:** InstantDB (App ID: fb13a3d0-35ab-493b-9aa6-64a77363fe93)  
+**AI Provider:** Google Gemini
 
 ---
 
@@ -740,7 +741,7 @@ async function analyzeImage(imageUrl) {
 - [ ] Session management
 
 ### Phase 2: Meal Diary (Core) 🔄 PARTIAL
-**Basic UI Complete, Core Logic Missing**
+**Basic UI Complete, Intelligence Layer In Progress**
 
 #### ✅ UI Layer (Complete)
 - [x] Calendar ribbon component (week view, navigation, clickable days)
@@ -753,36 +754,43 @@ async function analyzeImage(imageUrl) {
 - [x] Delete meal button
 - [x] Save to Stash button
 
-#### ❌ AI Parsing (Not Started)
-- [ ] **Text Input → AI Parsing** - Currently saves raw text as `meal_name`, no parsing
-- [ ] AI provider selection (OpenAI/Gemini)
-- [ ] API key management
-- [ ] Prompt implementation (Section 5.1)
-- [ ] Response parsing and validation
-- [ ] Error handling for AI failures
+#### ✅ AI Integration Library (Complete - `lib/gemini.js`)
+- [x] Google Gemini SDK installed (`@google/generative-ai`)
+- [x] API key management (localStorage persistence)
+- [x] `parseMealDescription()` - Prompt 1 implementation
+- [x] `getNutritionForIngredient()` - Prompt 2 implementation
+- [x] `analyzeFoodPhoto()` - Prompt 3 implementation
+- [x] `generateRecommendations()` - Prompt 4 implementation
+- [x] `processFullMeal()` - Combined parse + nutrition lookup
+- [x] Response cleaning (markdown code block removal)
+- [x] Error handling
 
-#### ❌ Ingredient Consistency Engine (Not Started)
-- [ ] `normalizeIngredientName()` function (Section 4.2)
-- [ ] Ingredient Library cache lookups
-- [ ] Cache hit: use stored `nutrients_per_100g`
-- [ ] Cache miss: call AI, store result
-- [ ] `use_count` and `last_used` tracking
-- [ ] Unit conversion system (`convertToGrams()`)
+#### ✅ Ingredient Consistency Engine (Complete - `lib/gemini.js`)
+- [x] `normalizeIngredientName()` function (Section 4.2)
+- [x] `convertToGrams()` unit conversion (Section 4.2)
+- [x] Unit lookup table (g, oz, cup, tbsp, tsp, slice, piece, etc.)
+- [ ] Ingredient Library cache integration (DB hooks needed)
+- [ ] `use_count` and `last_used` tracking (DB hooks needed)
 
-#### ❌ Local Recalculation (Not Started)
-- [ ] `recalculateIngredient()` for quantity edits (Section 4.3)
-- [ ] `multiplyNutrients()` helper function
-- [ ] Edit ingredient quantities without AI call
-- [ ] Recalculate `total_nutrients` from ingredient changes
-- [ ] Currently: edit only changes name/type, not nutrients
+#### ✅ Local Recalculation (Complete - `lib/gemini.js`)
+- [x] `multiplyNutrients()` helper function
+- [x] `recalculateIngredient()` for quantity edits (Section 4.3)
+- [x] `recalculateMealTotals()` for ingredient list changes
+- [ ] UI integration for editing ingredient quantities
 
-#### ❌ Image Analysis (Not Started)
+#### 🔄 Wiring Needed (Functions exist, not connected to UI)
+- [ ] Connect `processFullMeal()` to Diary "Log It" button
+- [ ] API key input in Settings
+- [ ] Show parsed ingredients in meal cards
+- [ ] Edit ingredient quantities UI
+- [ ] Connect cache to ingredientLibrary collection
+
+#### ❌ Image Analysis (Partial)
+- [x] `analyzeFoodPhoto()` function ready
 - [ ] Image storage solution (Cloudinary/InstantDB blobs/Base64)
-- [ ] Camera/upload UI
+- [ ] Camera/upload UI components
 - [ ] Nutrition label detection
 - [ ] OCR integration
-- [ ] AI Vision analysis (food photos)
-- [ ] `image_urls` field usage
 
 #### ❌ Voice Input (Not Started)
 - [ ] Speech-to-text integration
@@ -882,6 +890,15 @@ These are core features in the PDD that have NO implementation:
 - **Database:** InstantDB @instantdb/react 0.22.73
 - **Authentication:** TBD (InstantDB auth or external)
 - **Storage:** TBD for images
+
+### AI Integration
+- **Provider:** Google Gemini
+- **Models:**
+  - `gemini-1.5-flash` - Text parsing, nutrition lookup (fast, cheap)
+  - `gemini-1.5-pro` - Complex recommendations, image analysis (higher quality)
+- **SDK:** `@google/generative-ai` (client-side) or REST API
+- **API Key:** User-provided or environment variable
+- **Rate Limits:** 15 RPM (free tier), 1000 RPM (paid)
 
 ### Deployment
 - **Hosting:** GitHub Pages
