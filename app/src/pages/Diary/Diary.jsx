@@ -119,14 +119,14 @@ export default function Diary() {
     // Use AI to parse and analyze the meal
     setIsProcessing(true);
     try {
-      const { ingredients, totals } = await processFullMeal(mealInput);
+      const { ingredients, total_nutrients } = await processFullMeal(mealInput);
       
       const newMeal = {
         date: selectedDate,
         meal_type: selectedMealType,
         meal_name: mealInput,
         ingredients: ingredients,
-        total_nutrients: totals,
+        total_nutrients: total_nutrients,
         hydration_ml: 0,
         analysis_method: 'ai',
       };
