@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import Header from '../../components/Header/Header';
 import NutrientProgress from '../../components/ProgressBar/ProgressBar';
 import EmberMascot, { getEmberState } from '../../components/EmberMascot/EmberMascot';
@@ -7,6 +7,25 @@ import { useMeals, useHydration, useStash } from '../../hooks/useData';
 import { getToday } from '../../lib/nutrition';
 import { hasApiKey, processFullMeal, recalculateIngredient, recalculateMealTotals } from '../../lib/gemini';
 import './Diary.css';
+
+// Helper to convert File to base64
+const fileToBase64 = (file) => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      // Result is data:image/jpeg;base64,xxxx - we need just the base64 part
+      const base64 = reader.result.split(',')[1];
+      resolve({
+        base64,
+        mimeType: file.type || 'image/jpeg',
+        preview: reader.result, // Full data URL for preview
+        name: file.name,
+      });
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+};
 
 const MEAL_TYPES = [
   { key: 'breakfast', icon: '🍳', label: 'Brekkie' },
@@ -47,6 +66,11 @@ export default function Diary() {
   const [showAllNutrients, setShowAllNutrients] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [aiError, setAiError] = useState(null);
+  
+  // Image attachment state
+  const [attachedImages, setAttachedImages] = useState([]);
+  const cameraInputRef = useRef(null);
+  const galleryInputRef = useRef(null);
   
   // Edit modal state
   const [editingMeal, setEditingMeal] = useState(null);
@@ -102,9 +126,35 @@ export default function Diary() {
     setCalendarCenter(newCenter);
   };
   
+  // Image handling functions
+  const handleImageSelect = async (e) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+    
+    try {
+      const newImages = await Promise.all(files.map(fileToBase64));
+      setAttachedImages(prev => [...prev, ...newImages]);
+    } catch (error) {
+      console.error('Failed to read image:', error);
+      setAiError('Failed to read image. Please try again.');
+    }
+    
+    // Reset the input so same file can be selected again
+    e.target.value = '';
+  };
+  
+  const handleRemoveImage = (index) => {
+    setAttachedImages(prev => prev.filter((_, i) => i !== index));
+  };
+  
   const handleLogMeal = async (e) => {
     e.preventDefault();
-    if (!mealInput.trim()) return;
+    
+    const hasText = mealInput.trim().length > 0;
+    const hasImages = attachedImages.length > 0;
+    
+    // Need at least text OR images
+    if (!hasText && !hasImages) return;
     
     setAiError(null);
     
@@ -114,7 +164,7 @@ export default function Diary() {
       const newMeal = {
         date: selectedDate,
         meal_type: selectedMealType,
-        meal_name: mealInput,
+        meal_name: hasText ? mealInput : 'Meal with photos',
         ingredients: [],
         total_nutrients: { calories: 0, purines: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, sodium: 0, sugar: 0 },
         hydration_ml: 0,
@@ -122,13 +172,20 @@ export default function Diary() {
       };
       await addMeal(newMeal);
       setMealInput('');
+      setAttachedImages([]);
       return;
     }
     
-    // Use AI to parse and analyze the meal
+    // Use AI to parse and analyze the meal (text + images)
     setIsProcessing(true);
     try {
-      const { meal_name, ingredients, total_nutrients } = await processFullMeal(mealInput);
+      // Prepare images for API (only base64 and mimeType needed)
+      const imagesForApi = attachedImages.map(img => ({
+        base64: img.base64,
+        mimeType: img.mimeType,
+      }));
+      
+      const { meal_name, ingredients, total_nutrients } = await processFullMeal(mealInput, imagesForApi);
       
       const newMeal = {
         date: selectedDate,
@@ -138,11 +195,13 @@ export default function Diary() {
         ingredients: ingredients,
         total_nutrients: total_nutrients,
         hydration_ml: 0,
-        analysis_method: 'ai',
+        analysis_method: hasImages ? 'ai-vision' : 'ai',
+        image_count: attachedImages.length, // Track if images were used
       };
       
       await addMeal(newMeal);
       setMealInput('');
+      setAttachedImages([]);
     } catch (error) {
       console.error('AI parsing failed:', error);
       setAiError(error.message || 'Failed to analyze meal. Try again or check your API key.');
@@ -369,22 +428,83 @@ export default function Diary() {
         <div className="input-row">
           <input
             type="text"
-            placeholder="e.g., grilled chicken with rice..."
+            placeholder={attachedImages.length > 0 
+              ? "Add context or just tap Log It!" 
+              : "e.g., grilled chicken with rice..."}
             value={mealInput}
             onChange={(e) => setMealInput(e.target.value)}
             disabled={isProcessing}
           />
         </div>
+        
+        {/* Image Previews */}
+        {attachedImages.length > 0 && (
+          <div className="attached-images">
+            {attachedImages.map((img, index) => (
+              <div key={index} className="attached-image">
+                <img src={img.preview} alt={`Attached ${index + 1}`} />
+                <button 
+                  type="button"
+                  className="remove-image-btn"
+                  onClick={() => handleRemoveImage(index)}
+                  aria-label="Remove image"
+                >
+                  ✕
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+        
         {aiError && (
           <div className="ai-error">
             <span>⚠️ {aiError}</span>
           </div>
         )}
+        
+        {/* Hidden file inputs */}
+        <input
+          type="file"
+          ref={cameraInputRef}
+          accept="image/*"
+          capture="environment"
+          onChange={handleImageSelect}
+          style={{ display: 'none' }}
+        />
+        <input
+          type="file"
+          ref={galleryInputRef}
+          accept="image/*"
+          multiple
+          onChange={handleImageSelect}
+          style={{ display: 'none' }}
+        />
+        
         <div className="input-actions">
           <button type="button" className="btn btn-secondary" disabled={isProcessing}>🎤</button>
-          <button type="button" className="btn btn-secondary" disabled={isProcessing}>📸</button>
-          <button type="button" className="btn btn-secondary" disabled={isProcessing}>🖼️</button>
-          <button type="submit" className="btn btn-primary btn-lg" disabled={isProcessing || !mealInput.trim()}>
+          <button 
+            type="button" 
+            className="btn btn-secondary" 
+            disabled={isProcessing}
+            onClick={() => cameraInputRef.current?.click()}
+            title="Take a photo"
+          >
+            📸
+          </button>
+          <button 
+            type="button" 
+            className="btn btn-secondary" 
+            disabled={isProcessing}
+            onClick={() => galleryInputRef.current?.click()}
+            title="Choose from gallery"
+          >
+            🖼️
+          </button>
+          <button 
+            type="submit" 
+            className="btn btn-primary btn-lg" 
+            disabled={isProcessing || (!mealInput.trim() && attachedImages.length === 0)}
+          >
             {isProcessing ? (
               <>🔮 Analyzing...</>
             ) : (

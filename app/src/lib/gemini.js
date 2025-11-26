@@ -51,14 +51,34 @@ function cleanJsonResponse(text) {
 
 // ============================================
 // MAIN PROMPT: Parse meal AND get all nutrition in ONE call
-// This is the cost-efficient approach - single API call
+// Supports text + multiple images (food photos, nutrition labels)
 // ============================================
-export async function parseMealWithNutrition(userInput) {
+export async function parseMealWithNutrition(userInput, images = []) {
   const client = getAI();
   
-  const prompt = `Analyze this meal and provide complete nutritional breakdown:
+  const hasImages = images && images.length > 0;
+  const hasText = userInput && userInput.trim().length > 0;
+  
+  let contextDescription = '';
+  if (hasText && hasImages) {
+    contextDescription = `The user provided a text description AND ${images.length} image(s). Use ALL information together - the text gives context, images show the actual food and/or nutrition labels.`;
+  } else if (hasImages) {
+    contextDescription = `The user provided ${images.length} image(s) of their meal. These may include food photos and/or nutrition labels.`;
+  } else {
+    contextDescription = `The user provided a text description of their meal.`;
+  }
+  
+  const prompt = `Analyze this meal and provide complete nutritional breakdown.
 
-"${userInput}"
+${contextDescription}
+
+${hasText ? `Text description: "${userInput}"` : ''}
+
+Instructions:
+- If you see a NUTRITION LABEL in any image, use those EXACT values for that product
+- If you see FOOD in an image, identify items and estimate portions
+- Combine information from text AND images to build the complete meal
+- If text mentions something not visible in images, include it anyway
 
 Return ONLY valid JSON with no markdown formatting:
 {
@@ -102,9 +122,24 @@ Rules:
 - All values: calories=kcal, purines/sodium=mg, all others=grams`;
 
   try {
+    // Build contents array with text prompt + images
+    const contents = [{ text: prompt }];
+    
+    // Add images if provided
+    if (hasImages) {
+      for (const img of images) {
+        contents.push({
+          inlineData: {
+            data: img.base64,
+            mimeType: img.mimeType || 'image/jpeg',
+          },
+        });
+      }
+    }
+    
     const response = await client.models.generateContent({
       model: 'gemini-2.5-flash',
-      contents: prompt,
+      contents: contents,
     });
     
     const text = response.text;
@@ -309,11 +344,11 @@ Requirements:
 
 // ============================================
 // Helper: Process full meal - SINGLE API CALL
-// Uses parseMealWithNutrition for efficiency
+// Supports text + images for multimodal analysis
 // ============================================
-export async function processFullMeal(userInput) {
-  // Single API call gets everything
-  const result = await parseMealWithNutrition(userInput);
+export async function processFullMeal(userInput, images = []) {
+  // Single API call gets everything (text + images)
+  const result = await parseMealWithNutrition(userInput, images);
   
   // Normalize ingredient data structure for storage
   // IMPORTANT: Calculate nutrients_per_100g for local recalculation (PDD 4.3)
