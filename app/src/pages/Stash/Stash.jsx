@@ -13,8 +13,7 @@ const DEFAULT_BOTTLES = [
 ];
 
 const TABS = [
-  { key: 'meals', label: '📖 Meals', icon: '📖' },
-  { key: 'ingredients', label: '🧪 Ingredients', icon: '🧪' },
+  { key: 'meals', label: '📖 Saved Meals', icon: '📖' },
   { key: 'bottles', label: '🍶 Bottles', icon: '🍶' },
 ];
 
@@ -39,11 +38,11 @@ export default function Stash() {
   const [formNutrients, setFormNutrients] = useState({ calories: 0, purines: 0, protein: 0, carbs: 0, fat: 0 });
   
   // Use real data hooks
-  const { savedMeals, customIngredients, bottles: userBottles, isLoading, addToStash, removeFromStash, updateStashItem } = useStash();
+  const { savedMeals, bottles: userBottles, isLoading, addToStash, removeFromStash, updateStashItem } = useStash();
   const { adjustHydration } = useHydration();
   
-  // Combine default bottles with user bottles
-  const bottles = userBottles.length > 0 ? userBottles : DEFAULT_BOTTLES;
+  // Always show default bottles + user's custom bottles
+  const allBottles = [...DEFAULT_BOTTLES, ...userBottles];
   
   const handleTabChange = (tab) => {
     setActiveTab(tab);
@@ -95,31 +94,32 @@ export default function Stash() {
       return;
     }
     
-    if (editingItem) {
-      // Update existing item
+    // Check if editing a default bottle (id starts with 'default-')
+    const isDefaultItem = editingItem?.id?.startsWith('default-');
+    
+    if (editingItem && !isDefaultItem) {
+      // Update existing user-created item
       await updateStashItem(editingItem.id, {
         name: formName,
         icon: formIcon,
         capacity_ml: activeTab === 'bottles' ? formCapacity : undefined,
-        nutrients: activeTab === 'ingredients' ? formNutrients : undefined,
-        total_nutrients: activeTab === 'ingredients' ? formNutrients : undefined,
+        total_nutrients: activeTab === 'meals' ? formNutrients : undefined,
       });
       alert('Item updated! ✨');
     } else {
-      // Create new item
-      const itemType = activeTab === 'meals' ? 'meal' : activeTab === 'ingredients' ? 'ingredient' : 'container';
+      // Create new item (or create based on default)
+      const itemType = activeTab === 'meals' ? 'meal' : 'container';
       const newItem = {
         type: itemType,
         name: formName,
         icon: formIcon,
         capacity_ml: itemType === 'container' ? formCapacity : undefined,
-        ingredients: itemType === 'meal' ? [] : undefined,
-        total_nutrients: itemType !== 'container' ? formNutrients : undefined,
-        nutrients: itemType === 'ingredient' ? formNutrients : undefined,
+        ingredients: itemType === 'meal' ? (editingItem?.ingredients || []) : undefined,
+        total_nutrients: itemType === 'meal' ? formNutrients : undefined,
         use_count: 0,
       };
       await addToStash(newItem);
-      alert('Added to your hoard! 🐉');
+      alert(isDefaultItem ? 'Custom bottle created! 🐉' : 'Added to your hoard! 🐉');
     }
     
     resetForm();
@@ -129,11 +129,7 @@ export default function Stash() {
     meal.name?.toLowerCase().includes(searchQuery.toLowerCase())
   );
   
-  const filteredIngredients = customIngredients.filter(ing => 
-    ing.name?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-  
-  const filteredBottles = bottles.filter(bottle => 
+  const filteredBottles = allBottles.filter(bottle => 
     bottle.name?.toLowerCase().includes(searchQuery.toLowerCase())
   );
   
@@ -223,43 +219,6 @@ export default function Stash() {
         </section>
       )}
       
-      {activeTab === 'ingredients' && (
-        <section className="stash-content">
-          {filteredIngredients.length === 0 ? (
-            <div className="empty-state card">
-              <p>🧪 No custom ingredients yet!</p>
-              <p className="text-muted">Add ingredients that aren't in our database.</p>
-            </div>
-          ) : (
-            <div className="stash-list">
-              {filteredIngredients.map(ing => (
-                <div key={ing.id} className="stash-item card">
-                  <div className="stash-item-header">
-                    <h3>{ing.name}</h3>
-                    <span className="serving-info">{ing.serving_size || 100}{ing.serving_unit || 'g'}</span>
-                  </div>
-                  <div className="stash-item-nutrients">
-                    <span>🔥 {ing.nutrients?.calories || ing.total_nutrients?.calories || 0} cal</span>
-                    <span>🧬 {ing.nutrients?.purines || ing.total_nutrients?.purines || 0}mg</span>
-                    <span>💪 {ing.nutrients?.protein || ing.total_nutrients?.protein || 0}g</span>
-                    <span>🍞 {ing.nutrients?.carbs || ing.total_nutrients?.carbs || 0}g</span>
-                    <span>🧈 {ing.nutrients?.fat || ing.total_nutrients?.fat || 0}g</span>
-                  </div>
-                  <div className="stash-item-actions">
-                    <button className="btn btn-secondary btn-sm" onClick={() => handleEditItem(ing)}>✏️ Edit</button>
-                    <button className="btn btn-secondary btn-sm" onClick={() => handleDeleteItem(ing.id)}>🗑️</button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-          
-          <button className="btn btn-secondary w-full mt-md" onClick={handleOpenCreate}>
-            ➕ Add Custom Ingredient
-          </button>
-        </section>
-      )}
-      
       {activeTab === 'bottles' && (
         <section className="stash-content">
           <p className="text-muted">Custom hydration containers for quick logging.</p>
@@ -344,59 +303,6 @@ export default function Stash() {
                   />
                 </div>
               </>
-            )}
-            
-            {activeTab === 'ingredients' && (
-              <div className="nutrients-form">
-                <label>Nutrients (per 100g)</label>
-                <div className="nutrient-inputs">
-                  <div className="form-group-inline">
-                    <span>🔥</span>
-                    <input
-                      type="number"
-                      value={formNutrients.calories}
-                      onChange={(e) => setFormNutrients({ ...formNutrients, calories: parseFloat(e.target.value) || 0 })}
-                      placeholder="cal"
-                    />
-                  </div>
-                  <div className="form-group-inline">
-                    <span>🧬</span>
-                    <input
-                      type="number"
-                      value={formNutrients.purines}
-                      onChange={(e) => setFormNutrients({ ...formNutrients, purines: parseFloat(e.target.value) || 0 })}
-                      placeholder="mg"
-                    />
-                  </div>
-                  <div className="form-group-inline">
-                    <span>💪</span>
-                    <input
-                      type="number"
-                      value={formNutrients.protein}
-                      onChange={(e) => setFormNutrients({ ...formNutrients, protein: parseFloat(e.target.value) || 0 })}
-                      placeholder="g"
-                    />
-                  </div>
-                  <div className="form-group-inline">
-                    <span>🍞</span>
-                    <input
-                      type="number"
-                      value={formNutrients.carbs}
-                      onChange={(e) => setFormNutrients({ ...formNutrients, carbs: parseFloat(e.target.value) || 0 })}
-                      placeholder="g"
-                    />
-                  </div>
-                  <div className="form-group-inline">
-                    <span>🧈</span>
-                    <input
-                      type="number"
-                      value={formNutrients.fat}
-                      onChange={(e) => setFormNutrients({ ...formNutrients, fat: parseFloat(e.target.value) || 0 })}
-                      placeholder="g"
-                    />
-                  </div>
-                </div>
-              </div>
             )}
             
             <div className="modal-actions">

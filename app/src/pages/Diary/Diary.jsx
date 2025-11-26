@@ -53,7 +53,14 @@ export default function Diary() {
   // Use real data hooks
   const { meals, isLoading: mealsLoading, addMeal, updateMeal, deleteMeal, getDailyTotals } = useMeals(selectedDate);
   const { totalHydration, adjustHydration, isLoading: hydrationLoading } = useHydration(selectedDate);
-  const { addToStash } = useStash();
+  const { addToStash, bottles: userBottles } = useStash();
+  
+  // Default bottles + user bottles for hydration quick-log
+  const defaultBottles = [
+    { id: 'quick-250', name: '+250ml', capacity_ml: 250, icon: null },
+    { id: 'quick-500', name: '+500ml', capacity_ml: 500, icon: null },
+  ];
+  const hydrationBottles = [...defaultBottles, ...userBottles];
   
   const calendarDays = getCalendarDays(calendarCenter);
   const thresholds = user?.thresholds || {};
@@ -247,9 +254,15 @@ export default function Diary() {
         </div>
         <div className="hydration-buttons">
           <button className="btn btn-secondary btn-danger-outline" onClick={() => handleAdjustHydration(-250)}>−250</button>
-          <button className="btn btn-secondary" onClick={() => handleAdjustHydration(250)}>+250</button>
-          <button className="btn btn-secondary" onClick={() => handleAdjustHydration(500)}>+500</button>
-          <button className="btn btn-secondary" onClick={() => handleAdjustHydration(750)}>🏆+750</button>
+          {hydrationBottles.map(bottle => (
+            <button 
+              key={bottle.id} 
+              className="btn btn-secondary"
+              onClick={() => handleAdjustHydration(bottle.capacity_ml)}
+            >
+              {bottle.icon || ''}{bottle.icon ? ' ' : ''}{bottle.name || `+${bottle.capacity_ml}ml`}
+            </button>
+          ))}
         </div>
       </div>
       

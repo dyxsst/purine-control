@@ -10,7 +10,7 @@ import './Settings.css';
 export default function Settings() {
   const navigate = useNavigate();
   const { user, isLoading, updateProfile, updateThresholds, updateTheme, saveUser } = useUser();
-  const { savedMeals, customIngredients } = useStash();
+  const { savedMeals, bottles } = useStash();
   
   // Local state for editing (synced from user context)
   const [profile, setProfile] = useState({
@@ -225,13 +225,13 @@ export default function Settings() {
       {/* Stash Management */}
       <section className="settings-section card">
         <h2 className="section-title">📚 Dragon's Hoard</h2>
-        <p className="text-muted">Manage your saved meals and custom ingredients.</p>
+        <p className="text-muted">Manage your saved meals and custom bottles.</p>
         <div className="stash-buttons">
           <button className="btn btn-secondary" onClick={() => navigate('/stash')}>
             📖 Saved Meals ({savedMeals?.length || 0})
           </button>
-          <button className="btn btn-secondary" onClick={() => navigate('/stash?tab=ingredients')}>
-            🧪 Custom Ingredients ({customIngredients?.length || 0})
+          <button className="btn btn-secondary" onClick={() => navigate('/stash?tab=bottles')}>
+            🍶 Custom Bottles ({bottles?.length || 0})
           </button>
         </div>
       </section>
@@ -428,7 +428,7 @@ export default function Settings() {
             <span className="stat-label">Day streak 🔥</span>
           </div>
           <div className="stat-item">
-            <span className="stat-value">{(savedMeals?.length || 0) + (customIngredients?.length || 0)}</span>
+            <span className="stat-value">{(savedMeals?.length || 0) + (bottles?.length || 0)}</span>
             <span className="stat-label">In hoard</span>
           </div>
           <div className="stat-item">

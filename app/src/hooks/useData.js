@@ -1,10 +1,14 @@
 import { db } from '../lib/instantdb';
 import { useUser } from '../contexts/UserContext';
 
-// Helper to get today's date in YYYY-MM-DD format
+// Helper to get today's date in YYYY-MM-DD format (local timezone)
 export const getToday = () => {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const now = new Date();
+  // Use local date components to avoid timezone issues
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 };
 
 // Hook for meals data
@@ -199,9 +203,11 @@ export function useStash() {
         user_id: userId,
         type: item.type,
         name: item.name,
+        icon: item.icon || null,
         ingredients: item.ingredients || [],
         total_nutrients: item.total_nutrients || {},
         capacity_ml: item.capacity_ml || 0,
+        use_count: item.use_count || 0,
         created_at: Date.now(),
       }),
     ]);
