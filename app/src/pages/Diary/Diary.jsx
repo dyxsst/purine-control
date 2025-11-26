@@ -5,7 +5,7 @@ import EmberMascot, { getEmberState } from '../../components/EmberMascot/EmberMa
 import { useUser } from '../../contexts/UserContext';
 import { useMeals, useHydration, useStash } from '../../hooks/useData';
 import { getToday } from '../../lib/nutrition';
-import { hasApiKey, processFullMeal } from '../../lib/gemini';
+import { hasApiKey, processFullMeal, recalculateIngredient, recalculateMealTotals } from '../../lib/gemini';
 import './Diary.css';
 
 const MEAL_TYPES = [
@@ -57,6 +57,10 @@ export default function Diary() {
   // Copy meal modal
   const [copyingMeal, setCopyingMeal] = useState(null);
   const [copyToDate, setCopyToDate] = useState('');
+  
+  // Ingredient editing state
+  const [editingIngredients, setEditingIngredients] = useState(null); // { mealId, ingredients }
+  const [ingredientChanges, setIngredientChanges] = useState({});  // { index: newQuantity }
   
   // Use real data hooks
   const { meals, isLoading: mealsLoading, addMeal, updateMeal, deleteMeal, getDailyTotals } = useMeals(selectedDate);
@@ -205,6 +209,79 @@ export default function Diary() {
     await addMeal(copiedMeal);
     setCopyingMeal(null);
     alert(`Meal copied to ${copyToDate}! 📋`);
+  };
+  
+  // Start editing ingredients for a meal
+  const handleEditIngredients = (meal) => {
+    setEditingIngredients({
+      mealId: meal.id,
+      originalIngredients: meal.ingredients,
+      ingredients: [...meal.ingredients],
+    });
+    setIngredientChanges({});
+  };
+  
+  // Update ingredient quantity (local state only)
+  const handleIngredientQtyChange = (index, newQty) => {
+    const qty = parseFloat(newQty) || 0;
+    setIngredientChanges(prev => ({ ...prev, [index]: qty }));
+  };
+  
+  // Save ingredient changes with local recalculation
+  const handleSaveIngredients = async () => {
+    if (!editingIngredients) return;
+    
+    // Apply changes using local recalculation (NO AI CALL!)
+    const updatedIngredients = editingIngredients.ingredients.map((ing, i) => {
+      if (ingredientChanges[i] !== undefined && ingredientChanges[i] !== ing.quantity) {
+        return recalculateIngredient(ing, ingredientChanges[i]);
+      }
+      return ing;
+    });
+    
+    // Recalculate meal totals
+    const newTotals = recalculateMealTotals(updatedIngredients);
+    
+    // Save to database
+    await updateMeal(editingIngredients.mealId, {
+      ingredients: updatedIngredients,
+      total_nutrients: newTotals,
+    });
+    
+    setEditingIngredients(null);
+    setIngredientChanges({});
+  };
+  
+  // Delete single ingredient from meal
+  const handleDeleteIngredient = async (index) => {
+    if (!editingIngredients) return;
+    
+    const updatedIngredients = editingIngredients.ingredients.filter((_, i) => i !== index);
+    setEditingIngredients(prev => ({
+      ...prev,
+      ingredients: updatedIngredients,
+    }));
+    
+    // Remove from changes if exists
+    const newChanges = { ...ingredientChanges };
+    delete newChanges[index];
+    // Reindex changes for indices after deleted one
+    const reindexed = {};
+    Object.keys(newChanges).forEach(k => {
+      const ki = parseInt(k);
+      if (ki > index) {
+        reindexed[ki - 1] = newChanges[k];
+      } else {
+        reindexed[ki] = newChanges[k];
+      }
+    });
+    setIngredientChanges(reindexed);
+  };
+  
+  // Cancel ingredient editing
+  const handleCancelIngredientEdit = () => {
+    setEditingIngredients(null);
+    setIngredientChanges({});
   };
   
   // Save meal to stash
@@ -369,17 +446,70 @@ export default function Diary() {
                   <h3 className="meal-name">{meal.meal_name}</h3>
                 </div>
                 {meal.ingredients && meal.ingredients.length > 0 && (
-                  <ul className="meal-ingredients">
-                    {meal.ingredients.map((ing, i) => (
-                      <li key={i}>
-                        <span className="ing-name">• {ing.name}</span>
-                        <span className="ing-qty">({ing.quantity}{ing.unit})</span>
-                        <span className="ing-nutrients">
-                          🔥{Math.round(ing.nutrients_per_unit?.calories || 0)} · 🧬{Math.round(ing.nutrients_per_unit?.purines || 0)}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
+                  <div className="meal-ingredients-section">
+                    {editingIngredients?.mealId === meal.id ? (
+                      /* Editing Mode */
+                      <div className="ingredients-edit-mode">
+                        <ul className="meal-ingredients editing">
+                          {editingIngredients.ingredients.map((ing, i) => {
+                            const currentQty = ingredientChanges[i] !== undefined ? ingredientChanges[i] : ing.quantity;
+                            const recalced = ingredientChanges[i] !== undefined 
+                              ? recalculateIngredient(ing, ingredientChanges[i])
+                              : ing;
+                            return (
+                              <li key={i} className="ingredient-edit-row">
+                                <span className="ing-name">• {ing.name}</span>
+                                <input
+                                  type="number"
+                                  className="ing-qty-input"
+                                  value={currentQty}
+                                  onChange={(e) => handleIngredientQtyChange(i, e.target.value)}
+                                  min="0"
+                                  step="0.1"
+                                />
+                                <span className="ing-unit">{ing.unit}</span>
+                                <span className="ing-nutrients">
+                                  🔥{Math.round(recalced.nutrients_per_unit?.calories || 0)} · 🧬{Math.round(recalced.nutrients_per_unit?.purines || 0)}
+                                </span>
+                                <button 
+                                  className="btn-icon btn-delete-ing"
+                                  onClick={() => handleDeleteIngredient(i)}
+                                  title="Remove ingredient"
+                                >
+                                  ✕
+                                </button>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                        <div className="ingredient-edit-actions">
+                          <button className="btn btn-secondary btn-sm" onClick={handleCancelIngredientEdit}>Cancel</button>
+                          <button className="btn btn-primary btn-sm" onClick={handleSaveIngredients}>💾 Save Changes</button>
+                        </div>
+                      </div>
+                    ) : (
+                      /* View Mode */
+                      <>
+                        <ul className="meal-ingredients">
+                          {meal.ingredients.map((ing, i) => (
+                            <li key={i}>
+                              <span className="ing-name">• {ing.name}</span>
+                              <span className="ing-qty">({ing.quantity}{ing.unit})</span>
+                              <span className="ing-nutrients">
+                                🔥{Math.round(ing.nutrients_per_unit?.calories || 0)} · 🧬{Math.round(ing.nutrients_per_unit?.purines || 0)}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                        <button 
+                          className="btn btn-link btn-edit-ingredients"
+                          onClick={() => handleEditIngredients(meal)}
+                        >
+                          ✏️ Edit quantities
+                        </button>
+                      </>
+                    )}
+                  </div>
                 )}
                 <div className="meal-nutrients meal-totals">
                   <span className="total-label">Total:</span>

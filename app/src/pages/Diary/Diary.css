@@ -334,6 +334,105 @@
   opacity: 0.7;
 }
 
+/* Ingredient Editing */
+.meal-ingredients-section {
+  margin-bottom: var(--space-sm);
+}
+
+.btn-edit-ingredients {
+  font-size: 0.75rem;
+  color: var(--color-primary);
+  padding: var(--space-xs) 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  opacity: 0.7;
+}
+
+.btn-edit-ingredients:hover {
+  opacity: 1;
+  text-decoration: underline;
+}
+
+.ingredients-edit-mode {
+  background: var(--color-surface-variant);
+  border-radius: var(--radius-sm);
+  padding: var(--space-sm);
+  margin: var(--space-sm) 0;
+}
+
+.meal-ingredients.editing li {
+  display: grid;
+  grid-template-columns: 1fr auto auto auto auto;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: var(--space-xs) 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.meal-ingredients.editing li:last-child {
+  border-bottom: none;
+}
+
+.ing-qty-input {
+  width: 60px;
+  padding: var(--space-xs);
+  font-size: 0.875rem;
+  text-align: center;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.ing-qty-input:focus {
+  border-color: var(--color-primary);
+  outline: none;
+}
+
+.ing-unit {
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+  min-width: 30px;
+}
+
+.btn-icon {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: var(--space-xs);
+  font-size: 0.875rem;
+  opacity: 0.5;
+  transition: opacity var(--transition-fast);
+}
+
+.btn-icon:hover {
+  opacity: 1;
+}
+
+.btn-delete-ing {
+  color: var(--color-danger);
+}
+
+.ingredient-edit-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-sm);
+  margin-top: var(--space-sm);
+  padding-top: var(--space-sm);
+  border-top: 1px solid var(--color-border);
+}
+
+.btn-sm {
+  font-size: 0.75rem;
+  padding: var(--space-xs) var(--space-sm);
+}
+
+.btn-link {
+  background: none;
+  border: none;
+}
+
 .meal-actions {
   display: flex;
   gap: var(--space-sm);
