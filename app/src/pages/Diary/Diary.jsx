@@ -3,9 +3,9 @@ import Header from '../../components/Header/Header';
 import NutrientProgress from '../../components/ProgressBar/ProgressBar';
 import EmberMascot, { getEmberState } from '../../components/EmberMascot/EmberMascot';
 import { useUser } from '../../contexts/UserContext';
-import { useMeals, useHydration, useStash } from '../../hooks/useData';
+import { useMeals, useHydration, useStash, useIngredientLibrary } from '../../hooks/useData';
 import { getToday } from '../../lib/nutrition';
-import { hasApiKey, processFullMeal, recalculateIngredient, recalculateMealTotals } from '../../lib/gemini';
+import { hasApiKey, processFullMeal, processFullMealWithCache, recalculateIngredient, recalculateMealTotals } from '../../lib/gemini';
 import './Diary.css';
 
 // Helper to convert File to base64
@@ -90,6 +90,7 @@ export default function Diary() {
   const { meals, isLoading: mealsLoading, addMeal, updateMeal, deleteMeal, getDailyTotals } = useMeals(selectedDate);
   const { totalHydration, adjustHydration, isLoading: hydrationLoading } = useHydration(selectedDate);
   const { addToStash, bottles: userBottles } = useStash();
+  const { lookupIngredient, addIngredient, recordUsage } = useIngredientLibrary();
   
   // Default bottles + user bottles for hydration quick-log
   const defaultBottles = [
@@ -185,7 +186,33 @@ export default function Diary() {
         mimeType: img.mimeType,
       }));
       
-      const { meal_name, ingredients, total_nutrients } = await processFullMeal(mealInput, imagesForApi);
+      let meal_name, ingredients, total_nutrients, cache_stats;
+      
+      if (hasImages) {
+        // Images require the full multimodal call - but still populate cache
+        const result = await processFullMeal(mealInput, imagesForApi, addIngredient);
+        meal_name = result.meal_name;
+        ingredients = result.ingredients;
+        total_nutrients = result.total_nutrients;
+        cache_stats = { hits: 0, misses: ingredients.length }; // All new from AI
+      } else {
+        // Text-only: Use cache-aware processing to save AI calls!
+        const cacheOps = {
+          lookup: lookupIngredient,
+          add: addIngredient,
+          recordUsage: recordUsage,
+        };
+        const result = await processFullMealWithCache(mealInput, [], cacheOps);
+        meal_name = result.meal_name;
+        ingredients = result.ingredients;
+        total_nutrients = result.total_nutrients;
+        cache_stats = result.cache_stats;
+        
+        // Log cache performance for debugging
+        if (cache_stats) {
+          console.log(`🐉 Ingredient cache: ${cache_stats.hits} hits, ${cache_stats.misses} AI calls`);
+        }
+      }
       
       const newMeal = {
         date: selectedDate,

@@ -345,8 +345,9 @@ Requirements:
 // ============================================
 // Helper: Process full meal - SINGLE API CALL
 // Supports text + images for multimodal analysis
+// Can optionally populate cache with learned ingredients
 // ============================================
-export async function processFullMeal(userInput, images = []) {
+export async function processFullMeal(userInput, images = [], cacheAdd = null) {
   // Single API call gets everything (text + images)
   const result = await parseMealWithNutrition(userInput, images);
   
@@ -359,6 +360,15 @@ export async function processFullMeal(userInput, images = []) {
     // This enables local recalculation without AI calls
     const scaleFactor = 100 / grams;
     const nutrientsPer100g = multiplyNutrients(ing.nutrients, scaleFactor);
+    
+    // Store in cache if provided (for future lookups)
+    if (cacheAdd) {
+      cacheAdd({
+        name: ing.name,
+        nutrients_per_100g: nutrientsPer100g,
+        source: 'ai',
+      });
+    }
     
     return {
       name: ing.name,
@@ -375,6 +385,125 @@ export async function processFullMeal(userInput, images = []) {
     meal_name: result.meal_name,
     ingredients: ingredients,
     total_nutrients: result.total_nutrients,
+  };
+}
+
+// ============================================
+// CACHE-AWARE meal processing (PDD 4.2)
+// Reduces AI calls by using cached ingredient data
+// 
+// cacheOps = { lookup: fn, add: fn, recordUsage: fn }
+// - lookup(name): returns cached ingredient or null
+// - add(ingredient): stores ingredient in cache
+// - recordUsage(normalizedName): increments use count
+// ============================================
+export async function processFullMealWithCache(userInput, images = [], cacheOps = null) {
+  // If no cache provided, fall back to regular processing
+  if (!cacheOps) {
+    return processFullMeal(userInput, images);
+  }
+  
+  const { lookup, add, recordUsage } = cacheOps;
+  
+  // Step 1: Parse the meal to get ingredient list with quantities
+  // This is a lighter call that just identifies ingredients
+  const parsed = await parseMealDescription(userInput);
+  
+  // Step 2: For each ingredient, check cache or call AI
+  const ingredientsWithNutrition = [];
+  const aiCallsNeeded = [];
+  const cachedIngredients = [];
+  
+  for (const ing of parsed.ingredients) {
+    const normalizedName = normalizeIngredientName(ing.name);
+    const cached = lookup ? lookup(normalizedName) : null;
+    
+    if (cached && cached.nutrients_per_100g) {
+      // CACHE HIT - use stored nutrients (zero AI cost!)
+      cachedIngredients.push({ ...ing, normalizedName, cached });
+      if (recordUsage) {
+        recordUsage(normalizedName); // Update use count
+      }
+    } else {
+      // CACHE MISS - need to call AI
+      aiCallsNeeded.push({ ...ing, normalizedName });
+    }
+  }
+  
+  // Step 3: Batch call AI for uncached ingredients (if any)
+  if (aiCallsNeeded.length > 0) {
+    // Call AI for each uncached ingredient
+    for (const ing of aiCallsNeeded) {
+      try {
+        const nutrients = await getNutritionForIngredient(ing.name);
+        
+        // Calculate for specific quantity
+        const grams = convertToGrams(ing.quantity, ing.unit);
+        const scaleFactor = grams / 100;
+        const nutrientsForQuantity = multiplyNutrients(nutrients, scaleFactor);
+        
+        ingredientsWithNutrition.push({
+          name: ing.name,
+          normalized_name: ing.normalizedName,
+          quantity: ing.quantity,
+          unit: ing.unit,
+          grams: grams,
+          nutrients_per_100g: nutrients,
+          nutrients_per_unit: nutrientsForQuantity,
+        });
+        
+        // Store in cache for future use
+        if (add) {
+          add({
+            name: ing.name,
+            nutrients_per_100g: nutrients,
+            source: 'ai',
+          });
+        }
+      } catch (error) {
+        console.error(`Failed to get nutrition for ${ing.name}:`, error);
+        // Add with zero nutrients rather than failing the whole meal
+        ingredientsWithNutrition.push({
+          name: ing.name,
+          normalized_name: ing.normalizedName,
+          quantity: ing.quantity,
+          unit: ing.unit,
+          grams: convertToGrams(ing.quantity, ing.unit),
+          nutrients_per_100g: { calories: 0, purines: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, sodium: 0, sugar: 0 },
+          nutrients_per_unit: { calories: 0, purines: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, sodium: 0, sugar: 0 },
+        });
+      }
+    }
+  }
+  
+  // Step 4: Process cached ingredients (no AI needed)
+  for (const item of cachedIngredients) {
+    const grams = convertToGrams(item.quantity, item.unit);
+    const scaleFactor = grams / 100;
+    const nutrientsForQuantity = multiplyNutrients(item.cached.nutrients_per_100g, scaleFactor);
+    
+    ingredientsWithNutrition.push({
+      name: item.name,
+      normalized_name: item.normalizedName,
+      quantity: item.quantity,
+      unit: item.unit,
+      grams: grams,
+      nutrients_per_100g: item.cached.nutrients_per_100g,
+      nutrients_per_unit: nutrientsForQuantity,
+    });
+  }
+  
+  // Step 5: Calculate totals
+  const total_nutrients = recalculateMealTotals(ingredientsWithNutrition);
+  
+  return {
+    meal_name: parsed.meal_name,
+    ingredients: ingredientsWithNutrition,
+    total_nutrients: total_nutrients,
+    cache_stats: {
+      hits: cachedIngredients.length,
+      misses: aiCallsNeeded.length,
+    },
   };
 }
 
