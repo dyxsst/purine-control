@@ -239,6 +239,23 @@ These items need decisions before development can proceed:
 
 ---
 
+### DEV-012: Ingredient Weight Estimation Bug Fix
+
+| Field | Value |
+|-------|-------|
+| **Date** | December 2, 2025 |
+| **Section** | Nutrition Logic (4.2), AI Integration (5.1) |
+| **Original Spec** | Static `UNIT_TO_GRAMS` lookup table used for all ingredients (slice=30g, piece=50g, etc.) |
+| **New Decision** | AI provides food-specific gram estimates in `parseMealDescription()` |
+| **Rationale** | Static conversion was fundamentally flawed: a bread slice (~30g) ≠ cucumber slice (~7g) ≠ tomato slice (~15g). AI can provide accurate estimates per food type. |
+| **Impact** | - Updated `parseMealDescription` prompt to include `grams` field<br>- AI provides realistic weights (bread ~30g, cucumber slice ~7g)<br>- `convertToGrams()` kept as fallback only<br>- Renamed `nutrients_per_unit` → `nutrients` for clarity (with backward compat) |
+
+**Files Affected:** `app/src/lib/gemini.js`, `app/src/pages/Diary/Diary.jsx`
+
+**User Action Required:** Delete meals logged before Dec 2, 2025 - they have incorrect gram weights and nutrient calculations.
+
+---
+
 ### DEV-010: Stash Tab Restructure - Removed Ingredients Tab
 
 | Field | Value |
@@ -275,15 +292,16 @@ The app now has a complete meal logging experience with AI-powered analysis:
 
 | Layer | Status | Notes |
 |-------|--------|-------|
-| **UI Components** | ✅ Done | All pages have shells |
+| **UI Components** | ✅ Done | All pages functional |
 | **Database Connection** | ✅ Done | InstantDB working |
 | **Basic CRUD** | ✅ Done | Meals, hydration, stash |
 | **AI Parsing** | ✅ Done | Text + Image analysis via Gemini |
 | **Ingredient Cache** | ✅ Done | Reduces AI calls on repeat ingredients |
 | **Local Recalc** | ✅ Done | Edit quantities without AI |
 | **Image Processing** | ✅ Done | Camera, gallery, OCR, food ID |
+| **Charts** | ✅ Done | Recharts LineChart with filters |
+| **Data Export** | ✅ Done | CSV export from Charts |
 | **Authentication** | ❌ None | Hardcoded `local-user` |
-| **Charts** | ❌ Shell | Needs Recharts integration |
 | **Oracle** | ❌ Shell | AI recommendations not wired |
 
 ### ✅ UI Layer Complete
@@ -320,8 +338,9 @@ The app now has a complete meal logging experience with AI-powered analysis:
 | **Ingredient Library** | 3.2, 4.2 | ✅ `useIngredientLibrary()` hook + cache |
 | **Cache Lookups** | 4.2 | ✅ `normalizeIngredientName()` + `lookupIngredient()` |
 | **Local Recalculation** | 4.3 | ✅ `recalculateIngredient()` + UI integration |
-| **Unit Conversion** | 4.2 | ✅ `convertToGrams()` with full unit table |
+| **Unit Conversion** | 4.2 | ✅ `convertToGrams()` with AI-specific weights |
 | **Image Analysis** | 5.2 | ✅ Camera + gallery + Gemini Vision |
+| **Charts/Visualization** | 6.2 | ✅ Recharts LineChart with all features |
 | **Recommendations** | 5.1 Prompt 4 | ❌ Oracle page still shell |
 
 ### ❌ Account Layer Missing
@@ -383,6 +402,7 @@ The app now has a complete meal logging experience with AI-powered analysis:
 | 1.2 | Nov 25, 2025 | Update | Added DEV-010, DEV-011, NOTE-005, NOTE-006; comprehensive status review |
 | 1.3 | Nov 26, 2025 | Correction | **Honest reassessment** - phases were incorrectly marked complete. UI layer done, intelligence layer missing. |
 | 1.4 | Dec 2, 2025 | Milestone | **Intelligence layer complete!** AI parsing, ingredient cache, local recalculation, image analysis all working. |
+| 1.5 | Dec 2, 2025 | Feature | **Charts page complete!** Recharts integration, date ranges, grouping, nutrient toggles, CSV export. Fixed ingredient weight estimation bug (DEV-012). |
 
 ---
 

@@ -839,15 +839,17 @@ async function analyzeImage(imageUrl) {
 - [ ] Account deletion
 - [ ] Multi-device sync (requires auth)
 
-### Phase 5: Charts ❌ NOT STARTED
-**Only Shell Exists**
+### Phase 5: Charts ✅ COMPLETE
+**Fully Implemented with Recharts**
 - [x] Charts page shell with placeholder
-- [ ] Recharts integration
-- [ ] Query meals by date range
-- [ ] Daily/Weekly/Monthly grouping
-- [ ] Nutrient toggle filters
-- [ ] Threshold limit lines
-- [ ] Data export button
+- [x] Recharts integration (LineChart, ResponsiveContainer)
+- [x] Query meals by date range (This Week / This Month / Custom)
+- [x] Daily/Weekly/Monthly grouping
+- [x] Nutrient toggle filters (8 nutrients, toggle on/off)
+- [x] Threshold reference lines (dotted horizontal)
+- [x] Data export button (CSV download)
+- [x] Custom tooltips with nutrient icons
+- [x] Legend showing daily targets
 
 ### Phase 6: Oracle ❌ NOT STARTED
 **Only Shell Exists**
@@ -875,11 +877,11 @@ These features from the PDD still need implementation:
 | Feature | PDD Section | Current State |
 |---------|-------------|---------------|
 | **Authentication** | Implied | Hardcoded `local-user` |
-| **Charts** | 6.2 | Shell only, no Recharts integration |
+| **Charts** | 6.2 | ✅ Complete with Recharts |
 | **Oracle** | 6.3 | Shell only, AI recommendations not wired |
 | **Voice Input** | 6.1 | 🎤 button exists but not wired |
 | **Gamification** | 7 | No badges, streaks, achievements |
-| **Data Export** | 6.4 | Not implemented |
+| **Data Export** | 6.4 | ✅ CSV export in Charts page |
 
 ---
 

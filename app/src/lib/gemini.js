@@ -180,7 +180,7 @@ Return ONLY valid JSON with no markdown formatting:
 Rules:
 - Make reasonable portion estimates if not specified
 - "grams" is the TOTAL weight in grams for the specified quantity
-- Use realistic weights: bread slice ~30g, cucumber slice ~7g, tomato slice ~15g, apple ~180g
+- Use realistic weights when estimating portions
 - If ambiguous, choose the most common interpretation`;
 
   try {
