@@ -2,29 +2,265 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-md);
+  padding-bottom: var(--space-xl);
 }
 
-.coming-soon {
-  text-align: center;
-  padding: var(--space-xl);
+/* Controls Card */
+.chart-controls {
+  padding: var(--space-md);
 }
 
-.coming-soon h2 {
+.control-row {
   margin-bottom: var(--space-md);
 }
 
-.feature-list {
-  list-style: none;
-  text-align: left;
-  max-width: 300px;
-  margin: var(--space-lg) auto 0;
+.control-row:last-child {
+  margin-bottom: 0;
 }
 
-.feature-list li {
+.control-group label {
+  display: block;
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+  margin-bottom: var(--space-xs);
+}
+
+.button-group {
+  display: flex;
+  gap: var(--space-xs);
+  flex-wrap: wrap;
+}
+
+.button-group .btn {
+  flex: 1;
+  min-width: 80px;
+  padding: var(--space-sm) var(--space-md);
+  font-size: 0.9rem;
+}
+
+.button-group .btn-small {
+  padding: var(--space-xs) var(--space-sm);
+  font-size: 0.85rem;
+}
+
+/* Custom Date Inputs */
+.custom-dates {
+  display: flex;
+  gap: var(--space-md);
   padding: var(--space-sm) 0;
-  border-bottom: 1px solid var(--color-border);
 }
 
-.feature-list li:last-child {
-  border-bottom: none;
+.date-input {
+  flex: 1;
+}
+
+.date-input label {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+  margin-bottom: var(--space-xs);
+}
+
+.date-input input {
+  width: 100%;
+  padding: var(--space-sm);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: 0.9rem;
+}
+
+/* Nutrient Toggles */
+.nutrient-toggles {
+  padding: var(--space-md);
+}
+
+.nutrient-toggles > label {
+  display: block;
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+  margin-bottom: var(--space-sm);
+}
+
+.toggle-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-xs);
+}
+
+.nutrient-toggle {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: var(--space-sm);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.nutrient-toggle:hover {
+  transform: scale(1.02);
+}
+
+.nutrient-toggle.active {
+  transform: scale(1.02);
+}
+
+.nutrient-icon {
+  font-size: 1.2rem;
+}
+
+.nutrient-label {
+  font-size: 0.65rem;
+  color: var(--color-text-secondary);
+  text-align: center;
+}
+
+.nutrient-toggle.active .nutrient-label {
+  color: var(--color-text);
+  font-weight: 500;
+}
+
+/* Chart Container */
+.chart-container {
+  padding: var(--space-md);
+  min-height: 320px;
+}
+
+.no-data {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 250px;
+  text-align: center;
+}
+
+.no-data .text-small {
+  font-size: 0.85rem;
+  margin-top: var(--space-sm);
+}
+
+/* Chart Tooltip */
+.chart-tooltip {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-sm) var(--space-md);
+  box-shadow: var(--shadow-md);
+}
+
+.tooltip-date {
+  font-weight: 600;
+  margin-bottom: var(--space-xs);
+  color: var(--color-text);
+  border-bottom: 1px solid var(--color-border);
+  padding-bottom: var(--space-xs);
+}
+
+.chart-tooltip p {
+  font-size: 0.85rem;
+  margin: 2px 0;
+}
+
+/* Chart Legend */
+.chart-legend {
+  padding: var(--space-md);
+}
+
+.chart-legend h3 {
+  font-size: 0.9rem;
+  color: var(--color-text-secondary);
+  margin-bottom: var(--space-sm);
+}
+
+.legend-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-sm);
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  font-size: 0.85rem;
+}
+
+.legend-color {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.legend-label {
+  flex: 1;
+  color: var(--color-text-secondary);
+}
+
+.legend-value {
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+/* Export Button */
+.export-btn {
+  width: 100%;
+  margin-top: var(--space-sm);
+}
+
+/* Loading State */
+.loading-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+  color: var(--color-text-secondary);
+}
+
+/* Recharts Overrides */
+.recharts-legend-wrapper {
+  padding-top: var(--space-md) !important;
+}
+
+.recharts-legend-item-text {
+  color: var(--color-text) !important;
+  font-size: 0.85rem !important;
+}
+
+.recharts-cartesian-axis-tick-value {
+  fill: var(--color-text-secondary);
+}
+
+/* Responsive adjustments */
+@media (max-width: 400px) {
+  .toggle-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+  
+  .nutrient-toggle {
+    padding: var(--space-xs);
+  }
+  
+  .nutrient-icon {
+    font-size: 1rem;
+  }
+  
+  .nutrient-label {
+    font-size: 0.6rem;
+  }
+  
+  .legend-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .button-group .btn {
+    min-width: 60px;
+    font-size: 0.8rem;
+  }
 }

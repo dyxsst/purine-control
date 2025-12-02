@@ -267,22 +267,24 @@ These items need decisions before development can proceed:
 
 ## Current Implementation Status
 
-> ⚠️ **HONEST ASSESSMENT (Nov 26, 2025):** Previous status updates incorrectly marked phases as "COMPLETE" when core logic was missing. This has been corrected.
+> ✅ **UPDATED ASSESSMENT (Dec 2, 2025):** Core intelligence layer is now complete. AI parsing, ingredient caching, local recalculation, and image analysis all working.
 
-### What We Actually Have: UI Shell + Basic CRUD
+### What We Have: Full Meal Diary with AI Intelligence
 
-The app has a functional UI with database persistence, but **lacks the core intelligence layer** defined in the PDD:
+The app now has a complete meal logging experience with AI-powered analysis:
 
-| Layer | Status | What's Missing |
-|-------|--------|----------------|
-| **UI Components** | ✅ Done | - |
-| **Database Connection** | ✅ Done | - |
-| **Basic CRUD** | ✅ Done | - |
-| **AI Parsing** | ❌ None | Entire Section 5.1 |
-| **Ingredient Cache** | ❌ None | Section 4.2 algorithm |
-| **Local Recalc** | ❌ None | Section 4.3 - edit quantities |
+| Layer | Status | Notes |
+|-------|--------|-------|
+| **UI Components** | ✅ Done | All pages have shells |
+| **Database Connection** | ✅ Done | InstantDB working |
+| **Basic CRUD** | ✅ Done | Meals, hydration, stash |
+| **AI Parsing** | ✅ Done | Text + Image analysis via Gemini |
+| **Ingredient Cache** | ✅ Done | Reduces AI calls on repeat ingredients |
+| **Local Recalc** | ✅ Done | Edit quantities without AI |
+| **Image Processing** | ✅ Done | Camera, gallery, OCR, food ID |
 | **Authentication** | ❌ None | Hardcoded `local-user` |
-| **Image Processing** | ❌ None | Section 5.2 strategy |
+| **Charts** | ❌ Shell | Needs Recharts integration |
+| **Oracle** | ❌ Shell | AI recommendations not wired |
 
 ### ✅ UI Layer Complete
 | Feature | Notes |
@@ -309,18 +311,18 @@ The app has a functional UI with database persistence, but **lacks the core inte
 | Stash items | Meals + bottles |
 | Theme persistence | Saves to user record |
 
-### ❌ Intelligence Layer Missing
+### ✅ Intelligence Layer Complete
 | Feature | PDD Section | Current State |
 |---------|-------------|---------------|
-| **AI Meal Parsing** | 5.1 Prompt 1 | Text saved as `meal_name` with no parsing |
-| **Ingredient Extraction** | 5.1 | `ingredients` array is empty |
-| **Nutrition Lookup** | 5.1 Prompt 2 | `total_nutrients` manually entered or empty |
-| **Ingredient Library** | 3.2, 4.2 | Collection unused |
-| **Cache Lookups** | 4.2 | `normalizeIngredientName()` not implemented |
-| **Local Recalculation** | 4.3 | Edit changes name only, not nutrients |
-| **Unit Conversion** | 4.2 | `convertToGrams()` not implemented |
-| **Image Analysis** | 5.2 | No upload, no storage, no AI |
-| **Recommendations** | 5.1 Prompt 4 | Oracle page is empty shell |
+| **AI Meal Parsing** | 5.1 Prompt 1 | ✅ `parseMealWithNutrition()` - text + images |
+| **Ingredient Extraction** | 5.1 | ✅ Full ingredients array with nutrients |
+| **Nutrition Lookup** | 5.1 Prompt 2 | ✅ `getNutritionForIngredient()` for cache misses |
+| **Ingredient Library** | 3.2, 4.2 | ✅ `useIngredientLibrary()` hook + cache |
+| **Cache Lookups** | 4.2 | ✅ `normalizeIngredientName()` + `lookupIngredient()` |
+| **Local Recalculation** | 4.3 | ✅ `recalculateIngredient()` + UI integration |
+| **Unit Conversion** | 4.2 | ✅ `convertToGrams()` with full unit table |
+| **Image Analysis** | 5.2 | ✅ Camera + gallery + Gemini Vision |
+| **Recommendations** | 5.1 Prompt 4 | ❌ Oracle page still shell |
 
 ### ❌ Account Layer Missing
 | Feature | Notes |
@@ -380,6 +382,7 @@ The app has a functional UI with database persistence, but **lacks the core inte
 | 1.1 | Nov 25, 2025 | Update | Added DEV-005 through DEV-009, resolved PENDING-001, added implementation notes |
 | 1.2 | Nov 25, 2025 | Update | Added DEV-010, DEV-011, NOTE-005, NOTE-006; comprehensive status review |
 | 1.3 | Nov 26, 2025 | Correction | **Honest reassessment** - phases were incorrectly marked complete. UI layer done, intelligence layer missing. |
+| 1.4 | Dec 2, 2025 | Milestone | **Intelligence layer complete!** AI parsing, ingredient cache, local recalculation, image analysis all working. |
 
 ---
 

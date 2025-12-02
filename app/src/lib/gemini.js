@@ -119,14 +119,8 @@ Rules:
 - "nutrients" are the values for THAT ingredient's quantity (not per 100g)
 - "total_nutrients" is the sum of all ingredients
 - Use USDA database for calories, protein, carbs, fat, fiber, sodium, sugar
+- Use USDA and medical literature for purine values, these need to be as precise as possible
 - All values: calories=kcal, purines/sodium=mg, all others=grams
-
-CRITICAL - Purine Values (mg per 100g, from medical literature):
-VERY HIGH (300-800+): organ meats (liver 550, kidney 700), sardines 480, anchovies 410, herring 380, mackerel 350
-HIGH (150-300): beef 130, pork 145, lamb 180, chicken thigh 175, turkey 150, shrimp 150, mussels 200, scallops 180
-MODERATE (50-150): chicken breast 100, salmon 120, tuna 120, lentils 130, beans 75, spinach 70, mushrooms 60, asparagus 55
-LOW (10-50): eggs 5, milk 0, cheese 10, bread 25, rice 25, pasta 50, potatoes 15, most vegetables 10-20, fruits 5-15
-VERY LOW (0-10): garlic 5, onion 5, olive oil 0, butter 0, sugar 0, honey 0
 
 Calculate purines by: (grams / 100) × purine_per_100g`;
 
@@ -230,13 +224,7 @@ All values in standard units:
 - all others: grams (g) except sodium (mg)
 
 Use USDA database for calories, protein, carbs, fat, fiber, sodium, sugar.
-
-PURINE REFERENCE VALUES (mg per 100g, from medical literature):
-VERY HIGH (300-800+): organ meats (liver 550, kidney 700), sardines 480, anchovies 410, herring 380
-HIGH (150-300): beef 130, pork 145, chicken thigh 175, shrimp 150, mussels 200
-MODERATE (50-150): chicken breast 100, salmon 120, lentils 130, beans 75, mushrooms 60
-LOW (10-50): eggs 5, cheese 10, bread 25, rice 25, pasta 50, potatoes 15, most vegetables 10-20
-VERY LOW (0-10): garlic 5, onion 5, olive oil 0, butter 0, milk 0, fruits 5-15`;
+Use USDA and medical literature for purine values. When conflicting purine data exists, average the result.`;
 
   try {
     const response = await client.models.generateContent({

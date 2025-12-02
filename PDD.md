@@ -755,42 +755,49 @@ async function analyzeImage(imageUrl) {
 - [x] Save to Stash button
 
 #### ✅ AI Integration Library (Complete - `lib/gemini.js`)
-- [x] Google Gemini SDK installed (`@google/generative-ai`)
+- [x] Google Gemini SDK installed (`@google/genai` v1.30.0)
 - [x] API key management (localStorage persistence)
-- [x] `parseMealDescription()` - Prompt 1 implementation
+- [x] `parseMealWithNutrition()` - Combined parse + nutrition in ONE call
+- [x] `parseMealDescription()` - Prompt 1 implementation (for cache-aware flow)
 - [x] `getNutritionForIngredient()` - Prompt 2 implementation
 - [x] `analyzeFoodPhoto()` - Prompt 3 implementation
 - [x] `generateRecommendations()` - Prompt 4 implementation
-- [x] `processFullMeal()` - Combined parse + nutrition lookup
+- [x] `processFullMeal()` - Combined parse + nutrition + cache population
+- [x] `processFullMealWithCache()` - Cache-aware processing (reduces AI calls)
 - [x] Response cleaning (markdown code block removal)
 - [x] Error handling
 
-#### ✅ Ingredient Consistency Engine (Complete - `lib/gemini.js`)
+#### ✅ Ingredient Consistency Engine (Complete - `lib/gemini.js` + `hooks/useData.js`)
 - [x] `normalizeIngredientName()` function (Section 4.2)
 - [x] `convertToGrams()` unit conversion (Section 4.2)
 - [x] Unit lookup table (g, oz, cup, tbsp, tsp, slice, piece, etc.)
-- [ ] Ingredient Library cache integration (DB hooks needed)
-- [ ] `use_count` and `last_used` tracking (DB hooks needed)
+- [x] `useIngredientLibrary()` hook with cache integration
+- [x] `use_count` and `last_used` tracking on cache hits
+- [x] Cache population on new ingredients
 
 #### ✅ Local Recalculation (Complete - `lib/gemini.js`)
 - [x] `multiplyNutrients()` helper function
 - [x] `recalculateIngredient()` for quantity edits (Section 4.3)
+- [x] `recalculateIngredientFull()` for quantity + unit changes
 - [x] `recalculateMealTotals()` for ingredient list changes
-- [ ] UI integration for editing ingredient quantities
+- [x] `nutrients_per_100g` stored for accurate recalculation
+- [x] UI integration for editing ingredient quantities in Diary
 
-#### 🔄 Wiring Needed (Functions exist, not connected to UI)
-- [ ] Connect `processFullMeal()` to Diary "Log It" button
-- [ ] API key input in Settings
-- [ ] Show parsed ingredients in meal cards
-- [ ] Edit ingredient quantities UI
-- [ ] Connect cache to ingredientLibrary collection
+#### ✅ Wiring Complete
+- [x] Connect `processFullMeal()` to Diary "Log It" button
+- [x] API key input in Settings (Dragon's Intelligence section)
+- [x] Show parsed ingredients in meal cards with per-ingredient nutrients
+- [x] Edit ingredient quantities UI with local recalculation
+- [x] Connect cache to ingredientLibrary collection
 
-#### ❌ Image Analysis (Partial)
-- [x] `analyzeFoodPhoto()` function ready
-- [ ] Image storage solution (Cloudinary/InstantDB blobs/Base64)
-- [ ] Camera/upload UI components
-- [ ] Nutrition label detection
-- [ ] OCR integration
+#### ✅ Image Analysis (Complete)
+- [x] Multimodal `parseMealWithNutrition()` handles text + images
+- [x] Base64 encoding for image storage (no external service needed)
+- [x] Camera capture UI (📸 button with `capture="environment"`)
+- [x] Gallery upload UI (🖼️ button with `multiple` selection)
+- [x] Image preview with remove functionality
+- [x] Nutrition label OCR via Gemini Vision
+- [x] Food photo identification via Gemini Vision
 
 #### ❌ Voice Input (Not Started)
 - [ ] Speech-to-text integration
@@ -861,19 +868,18 @@ async function analyzeImage(imageUrl) {
 
 ---
 
-## 8.1 🚨 CRITICAL MISSING PIECES
+## 8.1 🚨 REMAINING GAPS
 
-These are core features in the PDD that have NO implementation:
+These features from the PDD still need implementation:
 
 | Feature | PDD Section | Current State |
 |---------|-------------|---------------|
-| **AI Meal Parsing** | 5.1 Prompt 1 | Text saved as-is, no parsing |
-| **Ingredient Library** | 3.2, 4.2 | Collection exists, no code uses it |
-| **Local Recalculation** | 4.3 | Edit only changes name, not nutrients |
-| **Nutrition per ingredient** | 3.2 Meals schema | `ingredients` array empty or just names |
 | **Authentication** | Implied | Hardcoded `local-user` |
-| **Image Upload** | 5.2 | No storage, no UI |
-| **Unit Conversion** | 4.2 | Not implemented |
+| **Charts** | 6.2 | Shell only, no Recharts integration |
+| **Oracle** | 6.3 | Shell only, AI recommendations not wired |
+| **Voice Input** | 6.1 | 🎤 button exists but not wired |
+| **Gamification** | 7 | No badges, streaks, achievements |
+| **Data Export** | 6.4 | Not implemented |
 
 ---
 
