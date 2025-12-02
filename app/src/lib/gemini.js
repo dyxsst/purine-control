@@ -171,14 +171,16 @@ Return ONLY valid JSON with no markdown formatting:
     {
       "name": "ingredient name",
       "quantity": number,
-      "unit": "g" | "ml" | "cup" | "tbsp" | "tsp" | "oz" | "slice" | "piece"
+      "unit": "g" | "ml" | "cup" | "tbsp" | "tsp" | "oz" | "slice" | "piece",
+      "grams": number
     }
   ]
 }
 
 Rules:
 - Make reasonable portion estimates if not specified
-- Convert to metric units when possible
+- "grams" is the TOTAL weight in grams for the specified quantity
+- Use realistic weights: bread slice ~30g, cucumber slice ~7g, tomato slice ~15g, apple ~180g
 - If ambiguous, choose the most common interpretation`;
 
   try {
@@ -381,7 +383,7 @@ export async function processFullMeal(userInput, images = [], cacheAdd = null) {
       unit: ing.unit,
       grams: grams,
       nutrients_per_100g: nutrientsPer100g,  // For local recalc
-      nutrients_per_unit: ing.nutrients,      // For display
+      nutrients: ing.nutrients,               // Total nutrients for this ingredient
     };
   });
   
@@ -441,8 +443,8 @@ export async function processFullMealWithCache(userInput, images = [], cacheOps 
       try {
         const nutrients = await getNutritionForIngredient(ing.name);
         
-        // Calculate for specific quantity
-        const grams = convertToGrams(ing.quantity, ing.unit);
+        // Use AI-provided grams (food-specific), fallback to conversion only if missing
+        const grams = ing.grams || convertToGrams(ing.quantity, ing.unit);
         const scaleFactor = grams / 100;
         const nutrientsForQuantity = multiplyNutrients(nutrients, scaleFactor);
         
@@ -453,7 +455,7 @@ export async function processFullMealWithCache(userInput, images = [], cacheOps 
           unit: ing.unit,
           grams: grams,
           nutrients_per_100g: nutrients,
-          nutrients_per_unit: nutrientsForQuantity,
+          nutrients: nutrientsForQuantity,  // Total nutrients for this ingredient
         });
         
         // Store in cache for future use
@@ -472,9 +474,9 @@ export async function processFullMealWithCache(userInput, images = [], cacheOps 
           normalized_name: ing.normalizedName,
           quantity: ing.quantity,
           unit: ing.unit,
-          grams: convertToGrams(ing.quantity, ing.unit),
+          grams: ing.grams || convertToGrams(ing.quantity, ing.unit),
           nutrients_per_100g: { calories: 0, purines: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, sodium: 0, sugar: 0 },
-          nutrients_per_unit: { calories: 0, purines: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, sodium: 0, sugar: 0 },
+          nutrients: { calories: 0, purines: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, sodium: 0, sugar: 0 },
         });
       }
     }
@@ -482,7 +484,8 @@ export async function processFullMealWithCache(userInput, images = [], cacheOps 
   
   // Step 4: Process cached ingredients (no AI needed)
   for (const item of cachedIngredients) {
-    const grams = convertToGrams(item.quantity, item.unit);
+    // Use AI-provided grams (food-specific), fallback to conversion only if missing
+    const grams = item.grams || convertToGrams(item.quantity, item.unit);
     const scaleFactor = grams / 100;
     const nutrientsForQuantity = multiplyNutrients(item.cached.nutrients_per_100g, scaleFactor);
     
@@ -493,7 +496,7 @@ export async function processFullMealWithCache(userInput, images = [], cacheOps 
       unit: item.unit,
       grams: grams,
       nutrients_per_100g: item.cached.nutrients_per_100g,
-      nutrients_per_unit: nutrientsForQuantity,
+      nutrients: nutrientsForQuantity,  // Total nutrients for this ingredient
     });
   }
   
@@ -578,14 +581,14 @@ export function recalculateIngredient(storedIngredient, newQuantity) {
   const ratio = newQuantity / oldQuantity;
   const newGrams = (storedIngredient.grams || 100) * ratio;
   
+  // Support both old field name (nutrients_per_unit) and new (nutrients)
+  const currentNutrients = storedIngredient.nutrients || storedIngredient.nutrients_per_unit || {};
+  
   return {
     ...storedIngredient,
     quantity: newQuantity,
     grams: newGrams,
-    nutrients_per_unit: multiplyNutrients(
-      storedIngredient.nutrients_per_unit || {},
-      ratio
-    ),
+    nutrients: multiplyNutrients(currentNutrients, ratio),
   };
 }
 
@@ -600,7 +603,7 @@ export function recalculateIngredientFull(storedIngredient, newQuantity, newUnit
     quantity: newQuantity,
     unit: newUnit,
     grams: newGrams,
-    nutrients_per_unit: multiplyNutrients(
+    nutrients: multiplyNutrients(
       storedIngredient.nutrients_per_100g,
       scaleFactor
     ),
@@ -609,8 +612,10 @@ export function recalculateIngredientFull(storedIngredient, newQuantity, newUnit
 
 export function recalculateMealTotals(ingredients) {
   return ingredients.reduce((acc, ing) => {
-    Object.keys(ing.nutrients_per_unit).forEach((key) => {
-      acc[key] = (acc[key] || 0) + ing.nutrients_per_unit[key];
+    // Support both old field name (nutrients_per_unit) and new (nutrients)
+    const nutrients = ing.nutrients || ing.nutrients_per_unit || {};
+    Object.keys(nutrients).forEach((key) => {
+      acc[key] = (acc[key] || 0) + nutrients[key];
     });
     return acc;
   }, {});

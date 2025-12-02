@@ -616,7 +616,7 @@ export default function Diary() {
                                 />
                                 <span className="ing-unit">{ing.unit}</span>
                                 <span className="ing-nutrients">
-                                  🔥{Math.round(recalced.nutrients_per_unit?.calories || 0)} · 🧬{Math.round(recalced.nutrients_per_unit?.purines || 0)}
+                                  🔥{Math.round((recalced.nutrients || recalced.nutrients_per_unit)?.calories || 0)} · 🧬{Math.round((recalced.nutrients || recalced.nutrients_per_unit)?.purines || 0)}
                                 </span>
                                 <button 
                                   className="btn-icon btn-delete-ing"
@@ -643,7 +643,7 @@ export default function Diary() {
                               <span className="ing-name">• {ing.name}</span>
                               <span className="ing-qty">({ing.quantity || '?'}{ing.unit || 'g'})</span>
                               <span className="ing-nutrients">
-                                🔥{Math.round(ing.nutrients_per_unit?.calories || 0)} · 🧬{Math.round(ing.nutrients_per_unit?.purines || 0)}
+                                🔥{Math.round((ing.nutrients || ing.nutrients_per_unit)?.calories || 0)} · 🧬{Math.round((ing.nutrients || ing.nutrients_per_unit)?.purines || 0)}
                               </span>
                             </li>
                           ))}
