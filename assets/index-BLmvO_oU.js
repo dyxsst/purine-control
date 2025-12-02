@@ -92,7 +92,7 @@ Return ONLY valid JSON with no markdown formatting:
 Rules:
 - Make reasonable portion estimates if not specified
 - "grams" is the TOTAL weight in grams for the specified quantity
-- Use realistic weights: bread slice ~30g, cucumber slice ~7g, tomato slice ~15g, apple ~180g
+- Use realistic weights when estimating portions
 - If ambiguous, choose the most common interpretation`;try{const i=(await t.models.generateContent({model:"gemini-2.5-flash",contents:n})).text;return JSON.parse(d_(i))}catch(r){throw console.error("Failed to parse meal:",r),new Error(`Failed to parse meal: ${r.message}`)}}async function eK(e){const t=f_(),n=`Estimate complete nutritional information per 100g for this ingredient:
 
 "${e}"
