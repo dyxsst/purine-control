@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import Header from '../../components/Header/Header';
-import { useStash, useHydration, useMeals } from '../../hooks/useData';
+import { useStash, useHydration, useMeals, useAllMeals } from '../../hooks/useData';
 import './Stash.css';
 
 // Default bottles if none saved
@@ -40,6 +40,14 @@ export default function Stash() {
   const { savedMeals, bottles: userBottles, isLoading, addToStash, removeFromStash, updateStashItem } = useStash();
   const { adjustHydration } = useHydration();
   const { addMeal } = useMeals();
+  const { meals: allMeals } = useAllMeals();  // For counting actual usage
+  
+  // Calculate actual usage count for each stash meal from diary entries
+  const getMealUsageCount = useMemo(() => {
+    return (stashMealName) => {
+      return allMeals.filter(m => m.meal_name === stashMealName).length;
+    };
+  }, [allMeals]);
   
   // Always show default bottles + user's custom bottles
   const allBottles = [...DEFAULT_BOTTLES, ...userBottles];
@@ -63,11 +71,6 @@ export default function Stash() {
       ingredients: meal.ingredients || [],
       total_nutrients: meal.total_nutrients || {},
     });
-    
-    // Increment use count
-    if (meal.id && !meal.id.startsWith('default-')) {
-      await updateStashItem(meal.id, { use_count: (meal.use_count || 0) + 1 });
-    }
     
     alert(`${meal.name} added to diary! 🐉`);
     navigate('/');
@@ -215,7 +218,7 @@ export default function Stash() {
                 <div key={meal.id} className="stash-item card">
                   <div className="stash-item-header">
                     <h3>{meal.name}</h3>
-                    <span className="use-count">Used {meal.use_count || 0}x</span>
+                    <span className="use-count">Used {getMealUsageCount(meal.name)}x</span>
                   </div>
                   <p className="stash-item-ingredients">
                     {Array.isArray(meal.ingredients) 

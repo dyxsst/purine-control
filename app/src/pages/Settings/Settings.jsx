@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '../../components/Header/Header';
 import { useUser } from '../../contexts/UserContext';
-import { useStash, useAllMeals } from '../../hooks/useData';
+import { useStash, useAllMeals, useIngredientLibrary } from '../../hooks/useData';
 import { THEME_PRESETS, generateThemeFromSeed, applyTheme } from '../../lib/theme';
 import { DEFAULT_THRESHOLDS, calculateAllThresholds } from '../../lib/nutrition';
 import { hasApiKey, getApiKey, setApiKey, clearApiKey } from '../../lib/gemini';
@@ -13,6 +13,14 @@ export default function Settings() {
   const { user, isLoading, updateProfile, updateThresholds, updateTheme, saveUser } = useUser();
   const { savedMeals, bottles } = useStash();
   const { totalMeals, calculateStreak } = useAllMeals();  // Live stats from DB
+  const { 
+    ingredients, 
+    updateIngredient, 
+    deleteIngredient, 
+    findMealsWithIngredient,
+    propagateToMeals,
+    getIngredientUsageCount,
+  } = useIngredientLibrary();
   
   // Local state for editing (synced from user context)
   const [profile, setProfile] = useState({
@@ -35,6 +43,14 @@ export default function Settings() {
   const [apiKeyInput, setApiKeyInput] = useState('');
   const [showApiKey, setShowApiKey] = useState(false);
   const [apiKeyStatus, setApiKeyStatus] = useState(hasApiKey() ? 'saved' : 'none');
+  
+  // Ingredient Manager state
+  const [showIngredientManager, setShowIngredientManager] = useState(false);
+  const [ingredientSearch, setIngredientSearch] = useState('');
+  const [editingIngredient, setEditingIngredient] = useState(null);
+  const [editValues, setEditValues] = useState({});
+  const [propagateScope, setPropagateScope] = useState('none'); // 'none', 'week', 'month', 'all'
+  const [isPropagating, setIsPropagating] = useState(false);
   
   // Sync local state from user context
   useEffect(() => {
@@ -125,6 +141,79 @@ export default function Settings() {
     setHasChanges(false);
     alert("Dragon's settings saved! 🐉✨");
   };
+  
+  // Ingredient Manager handlers
+  const handleEditIngredient = (ingredient) => {
+    setEditingIngredient(ingredient);
+    setEditValues({
+      calories: ingredient.nutrients_per_100g?.calories || 0,
+      purines: ingredient.nutrients_per_100g?.purines || 0,
+      protein: ingredient.nutrients_per_100g?.protein || 0,
+      carbs: ingredient.nutrients_per_100g?.carbs || 0,
+      fat: ingredient.nutrients_per_100g?.fat || 0,
+      fiber: ingredient.nutrients_per_100g?.fiber || 0,
+      sodium: ingredient.nutrients_per_100g?.sodium || 0,
+      sugar: ingredient.nutrients_per_100g?.sugar || 0,
+    });
+    setPropagateScope('none');
+  };
+  
+  const handleSaveIngredient = async () => {
+    if (!editingIngredient) return;
+    
+    const newNutrients = {
+      calories: parseFloat(editValues.calories) || 0,
+      purines: parseFloat(editValues.purines) || 0,
+      protein: parseFloat(editValues.protein) || 0,
+      carbs: parseFloat(editValues.carbs) || 0,
+      fat: parseFloat(editValues.fat) || 0,
+      fiber: parseFloat(editValues.fiber) || 0,
+      sodium: parseFloat(editValues.sodium) || 0,
+      sugar: parseFloat(editValues.sugar) || 0,
+    };
+    
+    // Update the ingredient in the library
+    await updateIngredient(editingIngredient.normalized_name, {
+      nutrients_per_100g: newNutrients,
+    });
+    
+    // Propagate to meals if requested
+    if (propagateScope !== 'none') {
+      setIsPropagating(true);
+      const dateFilter = propagateScope === 'all' ? null : propagateScope;
+      const result = await propagateToMeals(
+        editingIngredient.normalized_name, 
+        newNutrients, 
+        dateFilter
+      );
+      setIsPropagating(false);
+      alert(`Updated ${result.updated} meals with new values! 🐉`);
+    } else {
+      alert('Ingredient updated! Future meals will use the new values. 🐉');
+    }
+    
+    setEditingIngredient(null);
+  };
+  
+  const handleDeleteIngredient = async (ingredient) => {
+    const usageCount = getIngredientUsageCount(ingredient.normalized_name);
+    const message = usageCount > 0 
+      ? `Delete "${ingredient.display_name}"? It's used in ${usageCount} meals. The AI will re-analyze it next time.`
+      : `Delete "${ingredient.display_name}" from the cache?`;
+    
+    if (confirm(message)) {
+      await deleteIngredient(ingredient.normalized_name);
+    }
+  };
+  
+  // Filter ingredients by search
+  const filteredIngredients = ingredients
+    .filter(i => 
+      !ingredientSearch || 
+      i.display_name?.toLowerCase().includes(ingredientSearch.toLowerCase()) ||
+      i.normalized_name?.toLowerCase().includes(ingredientSearch.toLowerCase())
+    )
+    .sort((a, b) => (b.use_count || 0) - (a.use_count || 0));
   
   if (isLoading) {
     return (
@@ -462,6 +551,184 @@ export default function Settings() {
           </div>
         </div>
       </section>
+      
+      {/* Ingredient Library Section */}
+      <section className="settings-section card">
+        <h2 className="section-title">📚 Ingredient Library</h2>
+        <p className="text-muted mb-md">
+          Manage cached ingredient data. Edit values to fix AI mistakes and optionally update past meals.
+        </p>
+        <div className="stats-grid mb-md">
+          <div className="stat-item">
+            <span className="stat-value">{ingredients.length}</span>
+            <span className="stat-label">Cached ingredients</span>
+          </div>
+        </div>
+        <button 
+          className="btn btn-secondary w-full"
+          onClick={() => setShowIngredientManager(true)}
+        >
+          📚 Manage Ingredients
+        </button>
+      </section>
+      
+      {/* Ingredient Manager Modal */}
+      {showIngredientManager && (
+        <div className="modal-overlay" onClick={() => !editingIngredient && setShowIngredientManager(false)}>
+          <div className="modal ingredient-manager-modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>{editingIngredient ? `Edit: ${editingIngredient.display_name}` : '📚 Ingredient Library'}</h2>
+              <button className="modal-close" onClick={() => {
+                setEditingIngredient(null);
+                setShowIngredientManager(false);
+              }}>×</button>
+            </div>
+            
+            {editingIngredient ? (
+              <div className="modal-body">
+                <p className="text-muted mb-md">
+                  Edit nutritional values per 100g. Used in {getIngredientUsageCount(editingIngredient.normalized_name)} meals.
+                </p>
+                
+                <div className="nutrient-edit-grid">
+                  <div className="form-group">
+                    <label>🔥 Calories</label>
+                    <input 
+                      type="number" 
+                      value={editValues.calories}
+                      onChange={e => setEditValues({...editValues, calories: e.target.value})}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>🧬 Purines (mg)</label>
+                    <input 
+                      type="number" 
+                      value={editValues.purines}
+                      onChange={e => setEditValues({...editValues, purines: e.target.value})}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>💪 Protein (g)</label>
+                    <input 
+                      type="number" 
+                      step="0.1"
+                      value={editValues.protein}
+                      onChange={e => setEditValues({...editValues, protein: e.target.value})}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>🍞 Carbs (g)</label>
+                    <input 
+                      type="number" 
+                      step="0.1"
+                      value={editValues.carbs}
+                      onChange={e => setEditValues({...editValues, carbs: e.target.value})}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>🧈 Fat (g)</label>
+                    <input 
+                      type="number" 
+                      step="0.1"
+                      value={editValues.fat}
+                      onChange={e => setEditValues({...editValues, fat: e.target.value})}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>🌾 Fiber (g)</label>
+                    <input 
+                      type="number" 
+                      step="0.1"
+                      value={editValues.fiber}
+                      onChange={e => setEditValues({...editValues, fiber: e.target.value})}
+                    />
+                  </div>
+                </div>
+                
+                <div className="form-group mt-md">
+                  <label>Apply changes to past meals?</label>
+                  <select 
+                    value={propagateScope} 
+                    onChange={e => setPropagateScope(e.target.value)}
+                    className="w-full"
+                  >
+                    <option value="none">Don't update past meals</option>
+                    <option value="week">Update meals from this week</option>
+                    <option value="month">Update meals from this month</option>
+                    <option value="all">Update ALL meals with this ingredient</option>
+                  </select>
+                  {propagateScope !== 'none' && (
+                    <p className="text-warning text-sm mt-sm">
+                      ⚠️ This will recalculate totals for {findMealsWithIngredient(editingIngredient.normalized_name, propagateScope === 'all' ? null : propagateScope).length} meals
+                    </p>
+                  )}
+                </div>
+                
+                <div className="modal-actions mt-md">
+                  <button 
+                    className="btn btn-secondary" 
+                    onClick={() => setEditingIngredient(null)}
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    className="btn btn-primary" 
+                    onClick={handleSaveIngredient}
+                    disabled={isPropagating}
+                  >
+                    {isPropagating ? 'Updating...' : '💾 Save Changes'}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="modal-body">
+                <input 
+                  type="text"
+                  placeholder="🔍 Search ingredients..."
+                  value={ingredientSearch}
+                  onChange={e => setIngredientSearch(e.target.value)}
+                  className="search-input w-full mb-md"
+                />
+                
+                {filteredIngredients.length === 0 ? (
+                  <div className="empty-state">
+                    <p>No ingredients cached yet.</p>
+                    <p className="text-muted">Log some meals and the AI will cache ingredients automatically.</p>
+                  </div>
+                ) : (
+                  <div className="ingredient-list">
+                    {filteredIngredients.map(ingredient => (
+                      <div key={ingredient.normalized_name} className="ingredient-item">
+                        <div className="ingredient-info">
+                          <span className="ingredient-name">{ingredient.display_name}</span>
+                          <span className="ingredient-stats text-muted">
+                            {ingredient.nutrients_per_100g?.purines || 0}mg purines/100g • 
+                            Used in {getIngredientUsageCount(ingredient.normalized_name)} meals
+                          </span>
+                        </div>
+                        <div className="ingredient-actions">
+                          <button 
+                            className="btn btn-sm btn-secondary"
+                            onClick={() => handleEditIngredient(ingredient)}
+                          >
+                            ✏️
+                          </button>
+                          <button 
+                            className="btn btn-sm btn-secondary"
+                            onClick={() => handleDeleteIngredient(ingredient)}
+                          >
+                            🗑️
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
       
       {/* AI Integration Section */}
       <section className="settings-section card">
