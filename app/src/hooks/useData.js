@@ -86,7 +86,7 @@ export function useMeals(date = null) {
 
   // Calculate daily totals
   const getDailyTotals = (targetDate = date || getToday()) => {
-    const dayMeals = meals.filter(m => m.date === targetDate);
+    const dayMeals = filteredMeals.filter(m => m.date === targetDate);
     
     const totals = dayMeals.reduce((acc, meal) => {
       if (meal.total_nutrients) {
@@ -102,11 +102,11 @@ export function useMeals(date = null) {
   };
 
   // Get count of all meals for this user (for stats)
-  const getMealCount = () => meals.length;
+  const getMealCount = () => filteredMeals.length;
 
   // Get unique dates with meals (for streak calculation)
   const getUniqueDates = () => {
-    const dates = new Set(meals.map(m => m.date));
+    const dates = new Set(filteredMeals.map(m => m.date));
     return Array.from(dates).sort();
   };
 
