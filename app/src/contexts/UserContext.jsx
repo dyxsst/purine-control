@@ -122,9 +122,10 @@ export function UserProvider({ children }) {
       
       if (orphanedData.data?.ingredientLibrary?.length > 0) {
         for (const item of orphanedData.data.ingredientLibrary) {
-          // ingredientLibrary uses normalized_name as key, not id
-          const key = item.normalized_name || item.id;
-          transactions.push(db.tx.ingredientLibrary[key].update({ user_id: realUserId }));
+          // Use the actual record ID (InstantDB requires UUIDs)
+          if (item.id) {
+            transactions.push(db.tx.ingredientLibrary[item.id].update({ user_id: realUserId }));
+          }
         }
         console.log(`🐉 Migrating ${orphanedData.data.ingredientLibrary.length} orphaned cached ingredients`);
       }

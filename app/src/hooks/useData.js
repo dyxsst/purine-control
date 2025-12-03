@@ -335,8 +335,24 @@ export function useIngredientLibrary() {
   const addIngredient = async (ingredient) => {
     const normalized = normalizeIngredientName(ingredient.name);
     
+    // Check if already exists (by normalized name)
+    const existing = ingredients.find(i => i.normalized_name === normalized);
+    if (existing) {
+      // Update existing instead of creating duplicate
+      await db.transact([
+        db.tx.ingredientLibrary[existing.id].update({
+          nutrients_per_100g: ingredient.nutrients_per_100g,
+          use_count: (existing.use_count || 0) + 1,
+          last_used: Date.now(),
+        }),
+      ]);
+      return normalized;
+    }
+    
+    // Create new with UUID
+    const ingredientId = crypto.randomUUID();
     await db.transact([
-      db.tx.ingredientLibrary[normalized].update({
+      db.tx.ingredientLibrary[ingredientId].update({
         normalized_name: normalized,
         display_name: ingredient.name,
         nutrients_per_100g: ingredient.nutrients_per_100g,
@@ -353,9 +369,9 @@ export function useIngredientLibrary() {
   // Increment use count
   const recordUsage = async (normalizedName) => {
     const existing = ingredients.find(i => i.normalized_name === normalizedName);
-    if (existing) {
+    if (existing && existing.id) {
       await db.transact([
-        db.tx.ingredientLibrary[normalizedName].update({
+        db.tx.ingredientLibrary[existing.id].update({
           use_count: (existing.use_count || 0) + 1,
           last_used: Date.now(),
         }),
@@ -365,8 +381,13 @@ export function useIngredientLibrary() {
 
   // Update ingredient in library
   const updateIngredient = async (normalizedName, updates) => {
+    const existing = ingredients.find(i => i.normalized_name === normalizedName);
+    if (!existing || !existing.id) {
+      console.warn(`Ingredient not found: ${normalizedName}`);
+      return;
+    }
     await db.transact([
-      db.tx.ingredientLibrary[normalizedName].update({
+      db.tx.ingredientLibrary[existing.id].update({
         ...updates,
         updated_at: Date.now(),
       }),
@@ -375,8 +396,13 @@ export function useIngredientLibrary() {
 
   // Delete ingredient from library
   const deleteIngredient = async (normalizedName) => {
+    const existing = ingredients.find(i => i.normalized_name === normalizedName);
+    if (!existing || !existing.id) {
+      console.warn(`Ingredient not found for deletion: ${normalizedName}`);
+      return;
+    }
     await db.transact([
-      db.tx.ingredientLibrary[normalizedName].delete(),
+      db.tx.ingredientLibrary[existing.id].delete(),
     ]);
   };
 
@@ -497,12 +523,13 @@ export function useIngredientLibrary() {
       }
     }
     
-    // Bulk add all found ingredients
+    // Bulk add all found ingredients using proper UUIDs
     if (ingredientMap.size > 0) {
       const transactions = [];
       for (const [normalized, data] of ingredientMap) {
+        const ingredientId = crypto.randomUUID();
         transactions.push(
-          db.tx.ingredientLibrary[normalized].update({
+          db.tx.ingredientLibrary[ingredientId].update({
             normalized_name: normalized,
             display_name: data.displayName,
             nutrients_per_100g: data.nutrients,
