@@ -460,7 +460,7 @@ export async function processFullMealWithCache(userInput, images = [], cacheOps 
         
         // Store in cache for future use
         if (add) {
-          add({
+          await add({
             name: ing.name,
             nutrients_per_100g: nutrients,
             source: 'ai',

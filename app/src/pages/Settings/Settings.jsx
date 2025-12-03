@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '../../components/Header/Header';
 import { useUser } from '../../contexts/UserContext';
@@ -14,12 +14,14 @@ export default function Settings() {
   const { savedMeals, bottles } = useStash();
   const { totalMeals, calculateStreak } = useAllMeals();  // Live stats from DB
   const { 
-    ingredients, 
+    ingredients,
+    allMeals,
     updateIngredient, 
     deleteIngredient, 
     findMealsWithIngredient,
     propagateToMeals,
     getIngredientUsageCount,
+    backfillFromMeals,
   } = useIngredientLibrary();
   
   // Local state for editing (synced from user context)
@@ -51,6 +53,28 @@ export default function Settings() {
   const [editValues, setEditValues] = useState({});
   const [propagateScope, setPropagateScope] = useState('none'); // 'none', 'week', 'month', 'all'
   const [isPropagating, setIsPropagating] = useState(false);
+  const [isBackfilling, setIsBackfilling] = useState(false);
+  const [backfillDone, setBackfillDone] = useState(false);
+  
+  // Auto-backfill ingredient cache when opening manager with empty cache but existing meals
+  useEffect(() => {
+    const shouldBackfill = showIngredientManager && 
+                          !backfillDone && 
+                          !isBackfilling && 
+                          ingredients.length === 0 && 
+                          allMeals.length > 0;
+    
+    if (shouldBackfill) {
+      setIsBackfilling(true);
+      backfillFromMeals()
+        .then(result => {
+          console.log('🐉 Backfill complete:', result);
+          setBackfillDone(true);
+        })
+        .catch(err => console.error('Backfill failed:', err))
+        .finally(() => setIsBackfilling(false));
+    }
+  }, [showIngredientManager, backfillDone, isBackfilling, ingredients.length, allMeals.length, backfillFromMeals]);
   
   // Sync local state from user context
   useEffect(() => {
@@ -690,7 +714,12 @@ export default function Settings() {
                   className="search-input w-full mb-md"
                 />
                 
-                {filteredIngredients.length === 0 ? (
+                {isBackfilling ? (
+                  <div className="empty-state">
+                    <p>🐉 Scanning meals for ingredients...</p>
+                    <p className="text-muted">Building your ingredient library from {allMeals.length} logged meals.</p>
+                  </div>
+                ) : filteredIngredients.length === 0 ? (
                   <div className="empty-state">
                     <p>No ingredients cached yet.</p>
                     <p className="text-muted">Log some meals and the AI will cache ingredients automatically.</p>

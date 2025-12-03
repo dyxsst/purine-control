@@ -468,8 +468,61 @@ export function useIngredientLibrary() {
     return findMealsWithIngredient(normalizedName).length;
   };
 
+  // Backfill ingredient library from existing meals
+  // This extracts all unique ingredients from past meals and adds them to the cache
+  const backfillFromMeals = async () => {
+    const existingNormalized = new Set(ingredients.map(i => i.normalized_name));
+    const ingredientMap = new Map(); // normalizedName -> { displayName, nutrients, count }
+    
+    // Scan all meals for ingredients with nutrition data
+    for (const meal of allMeals) {
+      const mealIngredients = meal.ingredients || [];
+      for (const ing of mealIngredients) {
+        // Only add ingredients that have nutrition data
+        if (!ing.nutrients_per_100g) continue;
+        
+        const normalized = normalizeIngredientName(ing.name || ing.display_name);
+        if (!normalized || existingNormalized.has(normalized)) continue;
+        
+        // Track or update the ingredient
+        if (!ingredientMap.has(normalized)) {
+          ingredientMap.set(normalized, {
+            displayName: ing.name || ing.display_name,
+            nutrients: ing.nutrients_per_100g,
+            count: 1,
+          });
+        } else {
+          ingredientMap.get(normalized).count++;
+        }
+      }
+    }
+    
+    // Bulk add all found ingredients
+    if (ingredientMap.size > 0) {
+      const transactions = [];
+      for (const [normalized, data] of ingredientMap) {
+        transactions.push(
+          db.tx.ingredientLibrary[normalized].update({
+            normalized_name: normalized,
+            display_name: data.displayName,
+            nutrients_per_100g: data.nutrients,
+            user_id: userId,
+            use_count: data.count,
+            last_used: Date.now(),
+            source: 'backfill',
+          })
+        );
+      }
+      await db.transact(transactions);
+      console.log(`🐉 Backfilled ${ingredientMap.size} ingredients from ${allMeals.length} meals`);
+    }
+    
+    return { added: ingredientMap.size };
+  };
+
   return {
     ingredients,
+    allMeals,
     isLoading,
     lookupIngredient,
     addIngredient,
@@ -479,6 +532,7 @@ export function useIngredientLibrary() {
     findMealsWithIngredient,
     propagateToMeals,
     getIngredientUsageCount,
+    backfillFromMeals,
   };
 }
 
