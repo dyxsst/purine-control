@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import Header from '../../components/Header/Header';
-import { useStash, useHydration, useMeals } from '../../hooks/useData';
+import { useStash, useHydration, useMeals, useAllMeals } from '../../hooks/useData';
+import { useUser } from '../../contexts/UserContext';
 import './Stash.css';
 
 // Default bottles if none saved
@@ -40,6 +41,19 @@ export default function Stash() {
   const { savedMeals, bottles: userBottles, isLoading, addToStash, removeFromStash, updateStashItem } = useStash();
   const { adjustHydration } = useHydration();
   const { addMeal } = useMeals();
+  const { totalMeals, calculateStreak } = useAllMeals();
+  const { user, updateStats } = useUser();
+  
+  // Helper to update stats after adding a meal
+  const updateStatsAfterMeal = async () => {
+    const streak = calculateStreak();
+    const currentLongest = user?.stats?.longest_streak_days || 0;
+    await updateStats({
+      total_meals_logged: totalMeals + 1,
+      current_streak_days: streak,
+      longest_streak_days: Math.max(streak, currentLongest),
+    });
+  };
   
   // Always show default bottles + user's custom bottles
   const allBottles = [...DEFAULT_BOTTLES, ...userBottles];
@@ -68,6 +82,9 @@ export default function Stash() {
     if (meal.id && !meal.id.startsWith('default-')) {
       await updateStashItem(meal.id, { use_count: (meal.use_count || 0) + 1 });
     }
+    
+    // Update user stats
+    await updateStatsAfterMeal();
     
     alert(`${meal.name} added to diary! 🐉`);
     navigate('/');

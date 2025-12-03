@@ -113,6 +113,25 @@ export function UserProvider({ children }) {
     }
   };
 
+  // Update stats (meals logged, streaks, etc.)
+  const updateStats = async (newStats) => {
+    const updatedStats = { ...user.stats, ...newStats };
+    const updatedUser = { ...user, stats: updatedStats };
+    setUser(updatedUser);
+
+    if (user.id && user.id !== 'local-user') {
+      await db.transact([
+        db.tx.users[user.id].update({ stats: updatedStats }),
+      ]);
+    }
+  };
+
+  // Increment a specific stat counter
+  const incrementStat = async (statName, amount = 1) => {
+    const currentValue = user.stats?.[statName] || 0;
+    await updateStats({ [statName]: currentValue + amount });
+  };
+
   // Update theme
   const updateTheme = async (preset, seedColor = null) => {
     const newTheme = {
@@ -193,6 +212,8 @@ export function UserProvider({ children }) {
     error,
     updateProfile,
     updateThresholds,
+    updateStats,
+    incrementStat,
     updateTheme,
     saveUser,
     setUser,

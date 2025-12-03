@@ -98,6 +98,15 @@ export function useMeals(date = null) {
     return totals;
   };
 
+  // Get count of all meals for this user (for stats)
+  const getMealCount = () => meals.length;
+
+  // Get unique dates with meals (for streak calculation)
+  const getUniqueDates = () => {
+    const dates = new Set(meals.map(m => m.date));
+    return Array.from(dates).sort();
+  };
+
   return {
     meals: sortedMeals,
     isLoading,
@@ -106,6 +115,66 @@ export function useMeals(date = null) {
     updateMeal,
     deleteMeal,
     getDailyTotals,
+    getMealCount,
+    getUniqueDates,
+  };
+}
+
+// Hook for ALL meals (not filtered by date) - used for stats
+export function useAllMeals() {
+  const { user } = useUser();
+  const userId = user?.id;
+  
+  const { isLoading, data } = db.useQuery(
+    userId ? { meals: { $: { where: { user_id: userId } } } } : null
+  );
+  
+  const meals = data?.meals || [];
+  
+  // Calculate current streak
+  const calculateStreak = () => {
+    if (meals.length === 0) return 0;
+    
+    // Get unique dates sorted descending
+    const dates = [...new Set(meals.map(m => m.date))].sort().reverse();
+    if (dates.length === 0) return 0;
+    
+    const today = getToday();
+    const yesterday = (() => {
+      const d = new Date();
+      d.setDate(d.getDate() - 1);
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    })();
+    
+    // Streak must start from today or yesterday
+    if (dates[0] !== today && dates[0] !== yesterday) {
+      return 0;
+    }
+    
+    // Count consecutive days
+    let streak = 0;
+    let expectedDate = new Date(dates[0] + 'T00:00:00');
+    
+    for (const dateStr of dates) {
+      const date = new Date(dateStr + 'T00:00:00');
+      const diffDays = Math.round((expectedDate - date) / (1000 * 60 * 60 * 24));
+      
+      if (diffDays === 0) {
+        streak++;
+        expectedDate.setDate(expectedDate.getDate() - 1);
+      } else {
+        break;
+      }
+    }
+    
+    return streak;
+  };
+  
+  return {
+    meals,
+    isLoading,
+    totalMeals: meals.length,
+    calculateStreak,
   };
 }
 
