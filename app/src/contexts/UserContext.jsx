@@ -68,6 +68,9 @@ export function UserProvider({ children }) {
           applyTheme(theme);
         }
       }
+      
+      // Migrate orphaned data from 'local-user' to the real user
+      migrateOrphanedData(dbUser.id);
     } else {
       // No user in DB, use local defaults
       setUser(DEFAULT_USER);
@@ -81,6 +84,57 @@ export function UserProvider({ children }) {
     
     setIsLoading(false);
   }, [dbLoading, data]);
+
+  // Migrate any data still assigned to 'local-user' to the real user ID
+  const migrateOrphanedData = async (realUserId) => {
+    if (!realUserId || realUserId === 'local-user') return;
+    
+    try {
+      const orphanedData = await db.queryOnce({ 
+        meals: { $: { where: { user_id: 'local-user' } } },
+        hydration: { $: { where: { user_id: 'local-user' } } },
+        customItems: { $: { where: { user_id: 'local-user' } } },
+        ingredientLibrary: { $: { where: { user_id: 'local-user' } } },
+      });
+      
+      const transactions = [];
+      
+      if (orphanedData.data?.meals?.length > 0) {
+        for (const meal of orphanedData.data.meals) {
+          transactions.push(db.tx.meals[meal.id].update({ user_id: realUserId }));
+        }
+        console.log(`🐉 Migrating ${orphanedData.data.meals.length} orphaned meals`);
+      }
+      
+      if (orphanedData.data?.hydration?.length > 0) {
+        for (const record of orphanedData.data.hydration) {
+          transactions.push(db.tx.hydration[record.id].update({ user_id: realUserId }));
+        }
+        console.log(`🐉 Migrating ${orphanedData.data.hydration.length} orphaned hydration records`);
+      }
+      
+      if (orphanedData.data?.customItems?.length > 0) {
+        for (const item of orphanedData.data.customItems) {
+          transactions.push(db.tx.customItems[item.id].update({ user_id: realUserId }));
+        }
+        console.log(`🐉 Migrating ${orphanedData.data.customItems.length} orphaned stash items`);
+      }
+      
+      if (orphanedData.data?.ingredientLibrary?.length > 0) {
+        for (const item of orphanedData.data.ingredientLibrary) {
+          transactions.push(db.tx.ingredientLibrary[item.id].update({ user_id: realUserId }));
+        }
+        console.log(`🐉 Migrating ${orphanedData.data.ingredientLibrary.length} orphaned cached ingredients`);
+      }
+      
+      if (transactions.length > 0) {
+        await db.transact(transactions);
+        console.log(`🐉 Migration complete! Moved ${transactions.length} records to user ${realUserId}`);
+      }
+    } catch (err) {
+      console.error('Migration failed:', err);
+    }
+  };
 
   // Update user profile
   const updateProfile = async (newProfile) => {
@@ -167,14 +221,23 @@ export function UserProvider({ children }) {
     const userData = dataToSave || user;
     
     if (user.id === 'local-user') {
-      // Create new user
+      // Create new user with a real ID
       const newId = crypto.randomUUID();
       const newUser = { 
         ...userData, 
         id: newId,
       };
       
-      await db.transact([
+      // First, get all existing data with 'local-user' ID
+      const existingData = await db.queryOnce({ 
+        meals: { $: { where: { user_id: 'local-user' } } },
+        hydration: { $: { where: { user_id: 'local-user' } } },
+        customItems: { $: { where: { user_id: 'local-user' } } },
+        ingredientLibrary: { $: { where: { user_id: 'local-user' } } },
+      });
+      
+      // Build transaction: create user + migrate all existing data
+      const transactions = [
         db.tx.users[newId].update({
           id: newId,
           name: newUser.name,
@@ -185,7 +248,41 @@ export function UserProvider({ children }) {
           stats: newUser.stats || {},
           created_at: Date.now(),
         }),
-      ]);
+      ];
+      
+      // Migrate meals
+      if (existingData.data?.meals) {
+        for (const meal of existingData.data.meals) {
+          transactions.push(db.tx.meals[meal.id].update({ user_id: newId }));
+        }
+        console.log(`Migrating ${existingData.data.meals.length} meals to user ${newId}`);
+      }
+      
+      // Migrate hydration records
+      if (existingData.data?.hydration) {
+        for (const record of existingData.data.hydration) {
+          transactions.push(db.tx.hydration[record.id].update({ user_id: newId }));
+        }
+        console.log(`Migrating ${existingData.data.hydration.length} hydration records to user ${newId}`);
+      }
+      
+      // Migrate custom items (stash)
+      if (existingData.data?.customItems) {
+        for (const item of existingData.data.customItems) {
+          transactions.push(db.tx.customItems[item.id].update({ user_id: newId }));
+        }
+        console.log(`Migrating ${existingData.data.customItems.length} stash items to user ${newId}`);
+      }
+      
+      // Migrate ingredient library
+      if (existingData.data?.ingredientLibrary) {
+        for (const item of existingData.data.ingredientLibrary) {
+          transactions.push(db.tx.ingredientLibrary[item.id].update({ user_id: newId }));
+        }
+        console.log(`Migrating ${existingData.data.ingredientLibrary.length} cached ingredients to user ${newId}`);
+      }
+      
+      await db.transact(transactions);
       
       setUser(newUser);
       setIsAuthenticated(true);

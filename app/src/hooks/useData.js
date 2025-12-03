@@ -20,23 +20,26 @@ export function useMeals(date = null) {
   const { user } = useUser();
   const userId = user?.id;
   
-  // Query meals for the user, optionally filtered by date
-  const query = date
-    ? { meals: { $: { where: { user_id: userId, date } } } }
-    : { meals: { $: { where: { user_id: userId } } } };
+  // Query ALL meals and filter client-side for reliability
+  const { isLoading, error, data } = db.useQuery(userId ? { meals: {} } : null);
   
-  const { isLoading, error, data } = db.useQuery(userId ? query : null);
+  const allMeals = data?.meals || [];
   
-  const meals = data?.meals || [];
+  // Filter by user_id and optionally by date
+  const filteredMeals = allMeals.filter(m => {
+    if (m.user_id !== userId) return false;
+    if (date && m.date !== date) return false;
+    return true;
+  });
   
   // Sort meals by meal_type order using useMemo for stable reference
   const sortedMeals = useMemo(() => {
-    return [...meals].sort((a, b) => {
+    return [...filteredMeals].sort((a, b) => {
       const orderA = MEAL_ORDER[a.meal_type] || 99;
       const orderB = MEAL_ORDER[b.meal_type] || 99;
       return orderA - orderB;
     });
-  }, [meals]);
+  }, [filteredMeals]);
 
   // Add a new meal
   const addMeal = async (mealData) => {
@@ -125,11 +128,12 @@ export function useAllMeals() {
   const { user } = useUser();
   const userId = user?.id;
   
-  const { isLoading, data } = db.useQuery(
-    userId ? { meals: { $: { where: { user_id: userId } } } } : null
-  );
+  // Query ALL meals from DB (no filter initially to debug)
+  const { isLoading, data } = db.useQuery({ meals: {} });
   
-  const meals = data?.meals || [];
+  // Then filter client-side by user_id
+  const allMeals = data?.meals || [];
+  const meals = allMeals.filter(m => m.user_id === userId);
   
   // Calculate current streak
   const calculateStreak = () => {
