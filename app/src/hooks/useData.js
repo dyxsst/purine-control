@@ -547,6 +547,66 @@ export function useIngredientLibrary() {
     return { added: ingredientMap.size };
   };
 
+  // Rename an ingredient in all meals (for merging duplicates)
+  // This changes the ingredient name and normalized_name in affected meals
+  const renameIngredientInMeals = async (oldNormalizedName, newDisplayName, newNutrientsPer100g) => {
+    const affectedMeals = findMealsWithIngredient(oldNormalizedName);
+    
+    if (affectedMeals.length === 0) return { updated: 0 };
+    
+    const newNormalizedName = normalizeIngredientName(newDisplayName);
+    const transactions = [];
+    
+    for (const meal of affectedMeals) {
+      const updatedIngredients = meal.ingredients.map(ing => {
+        const ingNormalized = normalizeIngredientName(ing.name || '');
+        if (ingNormalized === oldNormalizedName) {
+          // Rename and recalculate nutrients
+          const grams = ing.grams || ing.quantity_g || 100;
+          const multiplier = grams / 100;
+          return {
+            ...ing,
+            name: newDisplayName,
+            normalized_name: newNormalizedName,
+            nutrients_per_100g: newNutrientsPer100g,
+            nutrients: {
+              calories: Math.round((newNutrientsPer100g.calories || 0) * multiplier),
+              purines: Math.round((newNutrientsPer100g.purines || 0) * multiplier),
+              protein: Math.round((newNutrientsPer100g.protein || 0) * multiplier * 10) / 10,
+              carbs: Math.round((newNutrientsPer100g.carbs || 0) * multiplier * 10) / 10,
+              fat: Math.round((newNutrientsPer100g.fat || 0) * multiplier * 10) / 10,
+              fiber: Math.round((newNutrientsPer100g.fiber || 0) * multiplier * 10) / 10,
+              sodium: Math.round((newNutrientsPer100g.sodium || 0) * multiplier),
+              sugar: Math.round((newNutrientsPer100g.sugar || 0) * multiplier * 10) / 10,
+            },
+          };
+        }
+        return ing;
+      });
+      
+      // Recalculate total_nutrients
+      const newTotals = updatedIngredients.reduce((acc, ing) => {
+        if (ing.nutrients) {
+          Object.keys(ing.nutrients).forEach(key => {
+            acc[key] = (acc[key] || 0) + (ing.nutrients[key] || 0);
+          });
+        }
+        return acc;
+      }, {});
+      
+      transactions.push(
+        db.tx.meals[meal.id].update({
+          ingredients: updatedIngredients,
+          total_nutrients: newTotals,
+          updated_at: Date.now(),
+        })
+      );
+    }
+    
+    await db.transact(transactions);
+    return { updated: affectedMeals.length };
+  };
+
   return {
     ingredients,
     allMeals,
@@ -560,6 +620,7 @@ export function useIngredientLibrary() {
     propagateToMeals,
     getIngredientUsageCount,
     backfillFromMeals,
+    renameIngredientInMeals,
   };
 }
 

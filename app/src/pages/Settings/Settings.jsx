@@ -22,6 +22,7 @@ export default function Settings() {
     propagateToMeals,
     getIngredientUsageCount,
     backfillFromMeals,
+    renameIngredientInMeals,
   } = useIngredientLibrary();
   
   // Local state for editing (synced from user context)
@@ -252,48 +253,85 @@ export default function Settings() {
       mergeSelection.includes(i.normalized_name)
     );
     
-    // Use the first one as the target (user can rename after)
-    const targetName = prompt(
-      `Merge ${selectedIngredients.length} ingredients into one.\n\n` +
-      `Enter the Spanish name for the merged ingredient:`,
-      selectedIngredients[0].display_name
+    // Let user pick which ingredient is the "primary" (keeps its name)
+    const primaryOptions = selectedIngredients.map((ing, idx) => 
+      `${idx + 1}. ${ing.display_name} (${getIngredientUsageCount(ing.normalized_name)} meals)`
+    ).join('\n');
+    
+    const primaryChoice = prompt(
+      `Which ingredient should be the PRIMARY (all others will be renamed to this)?\n\n` +
+      `${primaryOptions}\n\n` +
+      `Enter the number (1-${selectedIngredients.length}):`,
+      '1'
     );
     
-    if (!targetName) return;
+    if (!primaryChoice) return;
     
-    // Average the nutritional values
-    const avgNutrients = {};
-    const nutrientKeys = ['calories', 'purines', 'protein', 'carbs', 'fat', 'fiber', 'sodium', 'sugar'];
-    for (const key of nutrientKeys) {
-      const sum = selectedIngredients.reduce((acc, ing) => 
-        acc + (ing.nutrients_per_100g?.[key] || 0), 0
-      );
-      avgNutrients[key] = Math.round((sum / selectedIngredients.length) * 10) / 10;
+    const primaryIndex = parseInt(primaryChoice) - 1;
+    if (isNaN(primaryIndex) || primaryIndex < 0 || primaryIndex >= selectedIngredients.length) {
+      alert('Invalid selection');
+      return;
     }
     
-    // Update all meals that use any of the merged ingredients
+    const primaryIngredient = selectedIngredients[primaryIndex];
+    const secondaryIngredients = selectedIngredients.filter((_, idx) => idx !== primaryIndex);
+    
+    // Use the primary ingredient's nutritional values (or let user choose to average)
+    const useAverage = confirm(
+      `Use averaged nutritional values?\n\n` +
+      `OK = Average all selected ingredients\n` +
+      `Cancel = Keep "${primaryIngredient.display_name}" values`
+    );
+    
+    let finalNutrients;
+    if (useAverage) {
+      finalNutrients = {};
+      const nutrientKeys = ['calories', 'purines', 'protein', 'carbs', 'fat', 'fiber', 'sodium', 'sugar'];
+      for (const key of nutrientKeys) {
+        const sum = selectedIngredients.reduce((acc, ing) => 
+          acc + (ing.nutrients_per_100g?.[key] || 0), 0
+        );
+        finalNutrients[key] = Math.round((sum / selectedIngredients.length) * 10) / 10;
+      }
+    } else {
+      finalNutrients = primaryIngredient.nutrients_per_100g;
+    }
+    
     setIsPropagating(true);
     let totalUpdated = 0;
     
-    for (const normalizedName of mergeSelection) {
-      const result = await propagateToMeals(normalizedName, avgNutrients, null);
+    // Rename all secondary ingredients to the primary name in their meals
+    for (const secondary of secondaryIngredients) {
+      const result = await renameIngredientInMeals(
+        secondary.normalized_name,
+        primaryIngredient.display_name,
+        finalNutrients
+      );
       totalUpdated += result.updated;
+      
+      // Delete the secondary ingredient from the cache
+      await deleteIngredient(secondary.normalized_name);
     }
     
-    // Delete all selected ingredients (they'll be replaced by the merged one)
-    for (const normalizedName of mergeSelection) {
-      await deleteIngredient(normalizedName);
+    // Update the primary ingredient with final nutrients (in case we averaged)
+    if (useAverage) {
+      await updateIngredient(primaryIngredient.normalized_name, {
+        nutrients_per_100g: finalNutrients,
+      });
+      // Also update meals using the primary ingredient with new averaged values
+      const primaryResult = await propagateToMeals(primaryIngredient.normalized_name, finalNutrients, null);
+      totalUpdated += primaryResult.updated;
     }
-    
-    // Add the merged ingredient with the new name
-    // We need to import the hook's addIngredient for this
-    // For now, the next meal with this ingredient will re-cache it
     
     setIsPropagating(false);
     setMergeSelection([]);
     setMergeMode(false);
     
-    alert(`Merged ${selectedIngredients.length} ingredients! Updated ${totalUpdated} meals.\n\nThe new ingredient "${targetName}" will be cached automatically when used next. 🐉`);
+    alert(
+      `✅ Merged ${selectedIngredients.length} ingredients into "${primaryIngredient.display_name}"!\n\n` +
+      `• ${totalUpdated} meals updated\n` +
+      `• ${secondaryIngredients.length} duplicate(s) removed from cache`
+    );
   };
   
   const cancelMerge = () => {
