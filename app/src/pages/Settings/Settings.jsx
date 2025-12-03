@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '../../components/Header/Header';
 import { useUser } from '../../contexts/UserContext';
-import { useStash } from '../../hooks/useData';
+import { useStash, useAllMeals } from '../../hooks/useData';
 import { THEME_PRESETS, generateThemeFromSeed, applyTheme } from '../../lib/theme';
 import { DEFAULT_THRESHOLDS, calculateAllThresholds } from '../../lib/nutrition';
 import { hasApiKey, getApiKey, setApiKey, clearApiKey } from '../../lib/gemini';
@@ -12,6 +12,7 @@ export default function Settings() {
   const navigate = useNavigate();
   const { user, isLoading, updateProfile, updateThresholds, updateTheme, saveUser } = useUser();
   const { savedMeals, bottles } = useStash();
+  const { totalMeals, calculateStreak } = useAllMeals();  // Live stats from DB
   
   // Local state for editing (synced from user context)
   const [profile, setProfile] = useState({
@@ -444,11 +445,11 @@ export default function Settings() {
         <h2 className="section-title">📈 Dragon Statistics</h2>
         <div className="stats-grid">
           <div className="stat-item">
-            <span className="stat-value">{user?.stats?.total_meals_logged || 0}</span>
+            <span className="stat-value">{totalMeals}</span>
             <span className="stat-label">Meals logged</span>
           </div>
           <div className="stat-item">
-            <span className="stat-value">{user?.stats?.current_streak_days || 0}</span>
+            <span className="stat-value">{calculateStreak()}</span>
             <span className="stat-label">Day streak 🔥</span>
           </div>
           <div className="stat-item">

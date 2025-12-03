@@ -3,7 +3,7 @@ import Header from '../../components/Header/Header';
 import NutrientProgress from '../../components/ProgressBar/ProgressBar';
 import EmberMascot, { getEmberState } from '../../components/EmberMascot/EmberMascot';
 import { useUser } from '../../contexts/UserContext';
-import { useMeals, useHydration, useStash, useIngredientLibrary, useAllMeals } from '../../hooks/useData';
+import { useMeals, useHydration, useStash, useIngredientLibrary } from '../../hooks/useData';
 import { getToday } from '../../lib/nutrition';
 import { hasApiKey, processFullMeal, processFullMealWithCache, recalculateIngredient, recalculateMealTotals } from '../../lib/gemini';
 import './Diary.css';
@@ -91,19 +91,6 @@ export default function Diary() {
   const { totalHydration, adjustHydration, isLoading: hydrationLoading } = useHydration(selectedDate);
   const { addToStash, bottles: userBottles } = useStash();
   const { lookupIngredient, addIngredient, recordUsage } = useIngredientLibrary();
-  const { totalMeals, calculateStreak } = useAllMeals();
-  const { updateStats } = useUser();
-  
-  // Helper to update stats after adding a meal
-  const updateStatsAfterMeal = async () => {
-    const streak = calculateStreak();
-    const currentLongest = user?.stats?.longest_streak_days || 0;
-    await updateStats({
-      total_meals_logged: totalMeals + 1, // +1 for the meal just added
-      current_streak_days: streak,
-      longest_streak_days: Math.max(streak, currentLongest),
-    });
-  };
   
   // Default bottles + user bottles for hydration quick-log
   const defaultBottles = [
@@ -185,7 +172,6 @@ export default function Diary() {
         analysis_method: 'manual',
       };
       await addMeal(newMeal);
-      await updateStatsAfterMeal();
       setMealInput('');
       setAttachedImages([]);
       return;
@@ -241,7 +227,6 @@ export default function Diary() {
       };
       
       await addMeal(newMeal);
-      await updateStatsAfterMeal();
       setMealInput('');
       setAttachedImages([]);
     } catch (error) {
@@ -308,7 +293,6 @@ export default function Diary() {
     };
     
     await addMeal(copiedMeal);
-    await updateStatsAfterMeal();
     setCopyingMeal(null);
     alert(`Meal copied to ${copyToDate}! 📋`);
   };
