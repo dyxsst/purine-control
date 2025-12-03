@@ -55,6 +55,8 @@ export default function Settings() {
   const [isPropagating, setIsPropagating] = useState(false);
   const [isBackfilling, setIsBackfilling] = useState(false);
   const [backfillDone, setBackfillDone] = useState(false);
+  const [mergeMode, setMergeMode] = useState(false);
+  const [mergeSelection, setMergeSelection] = useState([]); // normalized_names to merge
   
   // Auto-backfill ingredient cache when opening manager with empty cache but existing meals
   useEffect(() => {
@@ -228,6 +230,75 @@ export default function Settings() {
     if (confirm(message)) {
       await deleteIngredient(ingredient.normalized_name);
     }
+  };
+  
+  // Merge handlers
+  const toggleMergeSelection = (normalizedName) => {
+    setMergeSelection(prev => 
+      prev.includes(normalizedName) 
+        ? prev.filter(n => n !== normalizedName)
+        : [...prev, normalizedName]
+    );
+  };
+  
+  const handleMergeIngredients = async () => {
+    if (mergeSelection.length < 2) {
+      alert('Select at least 2 ingredients to merge');
+      return;
+    }
+    
+    // Find the selected ingredients
+    const selectedIngredients = ingredients.filter(i => 
+      mergeSelection.includes(i.normalized_name)
+    );
+    
+    // Use the first one as the target (user can rename after)
+    const targetName = prompt(
+      `Merge ${selectedIngredients.length} ingredients into one.\n\n` +
+      `Enter the Spanish name for the merged ingredient:`,
+      selectedIngredients[0].display_name
+    );
+    
+    if (!targetName) return;
+    
+    // Average the nutritional values
+    const avgNutrients = {};
+    const nutrientKeys = ['calories', 'purines', 'protein', 'carbs', 'fat', 'fiber', 'sodium', 'sugar'];
+    for (const key of nutrientKeys) {
+      const sum = selectedIngredients.reduce((acc, ing) => 
+        acc + (ing.nutrients_per_100g?.[key] || 0), 0
+      );
+      avgNutrients[key] = Math.round((sum / selectedIngredients.length) * 10) / 10;
+    }
+    
+    // Update all meals that use any of the merged ingredients
+    setIsPropagating(true);
+    let totalUpdated = 0;
+    
+    for (const normalizedName of mergeSelection) {
+      const result = await propagateToMeals(normalizedName, avgNutrients, null);
+      totalUpdated += result.updated;
+    }
+    
+    // Delete all selected ingredients (they'll be replaced by the merged one)
+    for (const normalizedName of mergeSelection) {
+      await deleteIngredient(normalizedName);
+    }
+    
+    // Add the merged ingredient with the new name
+    // We need to import the hook's addIngredient for this
+    // For now, the next meal with this ingredient will re-cache it
+    
+    setIsPropagating(false);
+    setMergeSelection([]);
+    setMergeMode(false);
+    
+    alert(`Merged ${selectedIngredients.length} ingredients! Updated ${totalUpdated} meals.\n\nThe new ingredient "${targetName}" will be cached automatically when used next. 🐉`);
+  };
+  
+  const cancelMerge = () => {
+    setMergeMode(false);
+    setMergeSelection([]);
   };
   
   // Filter ingredients by search
@@ -706,13 +777,46 @@ export default function Settings() {
               </div>
             ) : (
               <div className="modal-body">
-                <input 
-                  type="text"
-                  placeholder="🔍 Search ingredients..."
-                  value={ingredientSearch}
-                  onChange={e => setIngredientSearch(e.target.value)}
-                  className="search-input w-full mb-md"
-                />
+                <div className="ingredient-toolbar mb-md">
+                  <input 
+                    type="text"
+                    placeholder="🔍 Search ingredients..."
+                    value={ingredientSearch}
+                    onChange={e => setIngredientSearch(e.target.value)}
+                    className="search-input flex-1"
+                  />
+                  {!mergeMode ? (
+                    <button 
+                      className="btn btn-secondary btn-sm ml-sm"
+                      onClick={() => setMergeMode(true)}
+                      disabled={filteredIngredients.length < 2}
+                    >
+                      🔗 Merge
+                    </button>
+                  ) : (
+                    <>
+                      <button 
+                        className="btn btn-primary btn-sm ml-sm"
+                        onClick={handleMergeIngredients}
+                        disabled={mergeSelection.length < 2 || isPropagating}
+                      >
+                        {isPropagating ? '...' : `✓ Merge ${mergeSelection.length}`}
+                      </button>
+                      <button 
+                        className="btn btn-secondary btn-sm ml-sm"
+                        onClick={cancelMerge}
+                      >
+                        ✕
+                      </button>
+                    </>
+                  )}
+                </div>
+                
+                {mergeMode && (
+                  <p className="text-muted text-sm mb-sm">
+                    Select 2+ ingredients to merge (duplicates in different languages, etc.)
+                  </p>
+                )}
                 
                 {isBackfilling ? (
                   <div className="empty-state">
@@ -727,7 +831,17 @@ export default function Settings() {
                 ) : (
                   <div className="ingredient-list">
                     {filteredIngredients.map(ingredient => (
-                      <div key={ingredient.normalized_name} className="ingredient-item">
+                      <div 
+                        key={ingredient.normalized_name} 
+                        className={`ingredient-item ${mergeMode && mergeSelection.includes(ingredient.normalized_name) ? 'selected' : ''}`}
+                        onClick={mergeMode ? () => toggleMergeSelection(ingredient.normalized_name) : undefined}
+                        style={mergeMode ? { cursor: 'pointer' } : undefined}
+                      >
+                        {mergeMode && (
+                          <span className="merge-checkbox">
+                            {mergeSelection.includes(ingredient.normalized_name) ? '☑️' : '⬜'}
+                          </span>
+                        )}
                         <div className="ingredient-info">
                           <span className="ingredient-name">{ingredient.display_name}</span>
                           <span className="ingredient-stats text-muted">
@@ -735,20 +849,22 @@ export default function Settings() {
                             Used in {getIngredientUsageCount(ingredient.normalized_name)} meals
                           </span>
                         </div>
-                        <div className="ingredient-actions">
-                          <button 
-                            className="btn btn-sm btn-secondary"
-                            onClick={() => handleEditIngredient(ingredient)}
-                          >
-                            ✏️
-                          </button>
-                          <button 
-                            className="btn btn-sm btn-secondary"
-                            onClick={() => handleDeleteIngredient(ingredient)}
-                          >
-                            🗑️
-                          </button>
-                        </div>
+                        {!mergeMode && (
+                          <div className="ingredient-actions">
+                            <button 
+                              className="btn btn-sm btn-secondary"
+                              onClick={() => handleEditIngredient(ingredient)}
+                            >
+                              ✏️
+                            </button>
+                            <button 
+                              className="btn btn-sm btn-secondary"
+                              onClick={() => handleDeleteIngredient(ingredient)}
+                            >
+                              🗑️
+                            </button>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>

@@ -79,6 +79,7 @@ Instructions:
 - If you see FOOD in an image, identify items and estimate portions
 - Combine information from text AND images to build the complete meal
 - If text mentions something not visible in images, include it anyway
+- IMPORTANT: Always return ingredient names in SPANISH (e.g., "Pechuga de pollo" not "Chicken breast")
 
 Return ONLY valid JSON with no markdown formatting:
 {
@@ -163,6 +164,8 @@ export async function parseMealDescription(userInput) {
   const prompt = `Parse this meal description into structured ingredient data:
 
 "${userInput}"
+
+IMPORTANT: Always return ingredient names in SPANISH (e.g., "Pechuga de pollo" not "Chicken breast").
 
 Return ONLY valid JSON with no markdown formatting:
 {
