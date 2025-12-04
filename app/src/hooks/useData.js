@@ -446,11 +446,13 @@ export function useIngredientLibrary() {
       const updatedIngredients = meal.ingredients.map(ing => {
         const ingNormalized = normalizeIngredientName(ing.name || '');
         if (ingNormalized === normalizedName) {
-          // Recalculate nutrients based on quantity
-          const grams = ing.quantity_g || 100;
+          // Recalculate nutrients based on actual grams
+          // AI stores grams in 'grams' field, not 'quantity_g'
+          const grams = ing.grams || ing.quantity_g || 100;
           const multiplier = grams / 100;
           return {
             ...ing,
+            nutrients_per_100g: newNutrientsPer100g,  // Update the per-100g reference
             nutrients: {
               calories: Math.round((newNutrientsPer100g.calories || 0) * multiplier),
               purines: Math.round((newNutrientsPer100g.purines || 0) * multiplier),
@@ -561,14 +563,14 @@ export function useIngredientLibrary() {
       const updatedIngredients = meal.ingredients.map(ing => {
         const ingNormalized = normalizeIngredientName(ing.name || '');
         if (ingNormalized === oldNormalizedName) {
-          // Rename and recalculate nutrients
+          // Rename and recalculate nutrients based on actual grams
           const grams = ing.grams || ing.quantity_g || 100;
           const multiplier = grams / 100;
           return {
             ...ing,
             name: newDisplayName,
             normalized_name: newNormalizedName,
-            nutrients_per_100g: newNutrientsPer100g,
+            nutrients_per_100g: newNutrientsPer100g,  // Store updated per-100g values
             nutrients: {
               calories: Math.round((newNutrientsPer100g.calories || 0) * multiplier),
               purines: Math.round((newNutrientsPer100g.purines || 0) * multiplier),
