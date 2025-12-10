@@ -1,9 +1,9 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useMemo } from 'react';
 import Header from '../../components/Header/Header';
 import NutrientProgress from '../../components/ProgressBar/ProgressBar';
 import EmberMascot, { getEmberState } from '../../components/EmberMascot/EmberMascot';
 import { useUser } from '../../contexts/UserContext';
-import { useMeals, useHydration, useStash, useIngredientLibrary } from '../../hooks/useData';
+import { useMeals, useHydration, useStash, useIngredientLibrary, useAllMeals } from '../../hooks/useData';
 import { getToday } from '../../lib/nutrition';
 import { hasApiKey, processFullMeal, processFullMealWithCache, recalculateIngredient, recalculateMealTotals } from '../../lib/gemini';
 import './Diary.css';
@@ -86,11 +86,16 @@ export default function Diary() {
   const [editingIngredients, setEditingIngredients] = useState(null); // { mealId, ingredients }
   const [ingredientChanges, setIngredientChanges] = useState({});  // { index: newQuantity }
   
+  // Autocomplete state
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(-1);
+  
   // Use real data hooks
   const { meals, isLoading: mealsLoading, addMeal, updateMeal, deleteMeal, getDailyTotals } = useMeals(selectedDate);
   const { totalHydration, adjustHydration, isLoading: hydrationLoading } = useHydration(selectedDate);
-  const { addToStash, bottles: userBottles } = useStash();
-  const { lookupIngredient, addIngredient, recordUsage } = useIngredientLibrary();
+  const { addToStash, bottles: userBottles, savedMeals: stashedMeals } = useStash();
+  const { lookupIngredient, addIngredient, recordUsage, ingredients: cachedIngredients } = useIngredientLibrary();
+  const { allMeals: historicalMeals } = useAllMeals();
   
   // Default bottles + user bottles for hydration quick-log
   const defaultBottles = [
@@ -112,6 +117,107 @@ export default function Diary() {
   const emberState = getEmberState(totals, thresholds);
   
   const isLoading = userLoading || mealsLoading || hydrationLoading;
+  
+  // Autocomplete suggestions based on input
+  const suggestions = useMemo(() => {
+    const query = mealInput.trim().toLowerCase();
+    if (query.length < 2) return [];
+    
+    const results = [];
+    
+    // Search stashed meals (saved favorites)
+    (stashedMeals || []).forEach(meal => {
+      if (meal.meal_name?.toLowerCase().includes(query)) {
+        results.push({
+          type: 'stash',
+          label: meal.meal_name,
+          sublabel: `📚 Stash • ${Math.round(meal.total_nutrients?.calories || 0)} cal`,
+          data: meal,
+        });
+      }
+    });
+    
+    // Search historical meals (unique names)
+    const seenMealNames = new Set(results.map(r => r.label.toLowerCase()));
+    (historicalMeals || []).forEach(meal => {
+      const name = meal.meal_name?.toLowerCase();
+      if (name && name.includes(query) && !seenMealNames.has(name)) {
+        seenMealNames.add(name);
+        results.push({
+          type: 'history',
+          label: meal.meal_name,
+          sublabel: `📜 History • ${Math.round(meal.total_nutrients?.calories || 0)} cal`,
+          data: meal,
+        });
+      }
+    });
+    
+    // Search cached ingredients
+    (cachedIngredients || []).forEach(ing => {
+      if (ing.display_name?.toLowerCase().includes(query)) {
+        results.push({
+          type: 'ingredient',
+          label: ing.display_name,
+          sublabel: `🧪 Ingredient • ${Math.round(ing.nutrients_per_100g?.purines || 0)}mg purines/100g`,
+          data: ing,
+        });
+      }
+    });
+    
+    return results.slice(0, 8); // Limit to 8 suggestions
+  }, [mealInput, stashedMeals, historicalMeals, cachedIngredients]);
+  
+  // Handle suggestion selection
+  const handleSelectSuggestion = (suggestion) => {
+    if (suggestion.type === 'stash' || suggestion.type === 'history') {
+      // Use the full meal - log it directly
+      handleUseSavedMeal(suggestion.data);
+    } else {
+      // Just fill in the ingredient name
+      setMealInput(suggestion.label);
+    }
+    setShowSuggestions(false);
+    setSelectedSuggestionIndex(-1);
+  };
+  
+  // Handle using a saved/historical meal
+  const handleUseSavedMeal = async (meal) => {
+    try {
+      await addMeal({
+        date: selectedDate,
+        meal_type: selectedMealType,
+        meal_name: meal.meal_name,
+        ingredients: meal.ingredients || [],
+        total_nutrients: meal.total_nutrients || {},
+      });
+      setMealInput('');
+      setShowSuggestions(false);
+    } catch (error) {
+      console.error('Failed to log meal:', error);
+      setAiError('Failed to log meal. Please try again.');
+    }
+  };
+  
+  // Handle keyboard navigation in suggestions
+  const handleInputKeyDown = (e) => {
+    if (!showSuggestions || suggestions.length === 0) return;
+    
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setSelectedSuggestionIndex(prev => 
+        prev < suggestions.length - 1 ? prev + 1 : prev
+      );
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setSelectedSuggestionIndex(prev => prev > 0 ? prev - 1 : -1);
+    } else if (e.key === 'Enter' && selectedSuggestionIndex >= 0) {
+      e.preventDefault();
+      handleSelectSuggestion(suggestions[selectedSuggestionIndex]);
+    } else if (e.key === 'Escape') {
+      setShowSuggestions(false);
+      setSelectedSuggestionIndex(-1);
+    }
+  };
   
   const handleAdjustHydration = async (amount) => {
     await adjustHydration(amount);
@@ -387,6 +493,57 @@ export default function Diary() {
     alert(`"${meal.meal_name}" saved to your Dragon's Hoard! 📚`);
   };
   
+  // Re-analyze meal with AI (refresh nutrient info)
+  const [reanalyzingMealId, setReanalyzingMealId] = useState(null);
+  
+  const handleReanalyzeMeal = async (meal) => {
+    if (!hasApiKey()) {
+      setAiError('Please set your Gemini API key in Settings to use AI re-analysis.');
+      return;
+    }
+    
+    const confirmMsg = `Re-analyze "${meal.meal_name}" with AI?\n\nThis will update the nutrient information based on the original description.`;
+    if (!confirm(confirmMsg)) return;
+    
+    setReanalyzingMealId(meal.id);
+    setAiError('');
+    
+    try {
+      // Use original description or meal name for re-analysis
+      const description = meal.description || meal.meal_name;
+      
+      // Process with AI using cache
+      const result = await processFullMealWithCache(
+        description,
+        [], // No images for re-analysis
+        lookupIngredient,
+        addIngredient
+      );
+      
+      // Update ingredients in cache
+      if (result.ingredients?.length > 0) {
+        for (const ing of result.ingredients) {
+          await recordUsage(ing.name);
+        }
+      }
+      
+      // Update the meal with new nutrient data
+      await updateMeal(meal.id, {
+        ingredients: result.ingredients,
+        total_nutrients: result.total_nutrients,
+        analysis_method: 'ai-reanalyzed',
+        last_reanalyzed: new Date().toISOString(),
+      });
+      
+      alert(`✨ "${meal.meal_name}" has been re-analyzed!`);
+    } catch (error) {
+      console.error('Re-analysis failed:', error);
+      setAiError(error.message || 'Failed to re-analyze meal. Try again later.');
+    } finally {
+      setReanalyzingMealId(null);
+    }
+  };
+  
   // Parse YYYY-MM-DD string to local date for display
   const parseLocalDate = (dateStr) => {
     const [year, month, day] = dateStr.split('-').map(Number);
@@ -457,16 +614,46 @@ export default function Diary() {
       {/* Input Section */}
       <form className="meal-input-section card" onSubmit={handleLogMeal}>
         <label className="input-label">What did your dragon eat? 🔥</label>
-        <div className="input-row">
-          <input
-            type="text"
-            placeholder={attachedImages.length > 0 
-              ? "Add context or just tap Log It!" 
-              : "e.g., grilled chicken with rice..."}
-            value={mealInput}
-            onChange={(e) => setMealInput(e.target.value)}
-            disabled={isProcessing}
-          />
+        <div className="input-row-wrapper">
+          <div className="input-row">
+            <input
+              type="text"
+              placeholder={attachedImages.length > 0 
+                ? "Add context or just tap Log It!" 
+                : "e.g., grilled chicken with rice..."}
+              value={mealInput}
+              onChange={(e) => {
+                setMealInput(e.target.value);
+                setShowSuggestions(true);
+                setSelectedSuggestionIndex(-1);
+              }}
+              onKeyDown={handleInputKeyDown}
+              onFocus={() => setShowSuggestions(true)}
+              onBlur={() => {
+                // Delay hiding to allow click on suggestion
+                setTimeout(() => setShowSuggestions(false), 150);
+              }}
+              disabled={isProcessing}
+            />
+          </div>
+          
+          {/* Autocomplete Suggestions */}
+          {showSuggestions && suggestions.length > 0 && (
+            <div className="suggestions-dropdown">
+              {suggestions.map((suggestion, index) => (
+                <button
+                  key={`${suggestion.type}-${suggestion.label}-${index}`}
+                  type="button"
+                  className={`suggestion-item ${index === selectedSuggestionIndex ? 'selected' : ''}`}
+                  onClick={() => handleSelectSuggestion(suggestion)}
+                  onMouseEnter={() => setSelectedSuggestionIndex(index)}
+                >
+                  <span className="suggestion-label">{suggestion.label}</span>
+                  <span className="suggestion-sublabel">{suggestion.sublabel}</span>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
         
         {/* Image Previews */}
@@ -676,6 +863,14 @@ export default function Diary() {
                 <div className="meal-actions">
                   <button className="btn btn-secondary" onClick={() => handleEditMeal(meal)}>✏️ Edit</button>
                   <button className="btn btn-secondary" onClick={() => handleCopyMeal(meal)}>📋 Copy</button>
+                  <button 
+                    className="btn btn-secondary" 
+                    onClick={() => handleReanalyzeMeal(meal)}
+                    disabled={reanalyzingMealId === meal.id}
+                    title="Re-analyze nutrients with AI"
+                  >
+                    {reanalyzingMealId === meal.id ? '⏳' : '🔄'} AI
+                  </button>
                   <button className="btn btn-secondary" onClick={() => handleDeleteMeal(meal.id)}>🗑️</button>
                   <button className="btn btn-secondary" onClick={() => handleSaveToStash(meal)}>📚 Stash</button>
                 </div>

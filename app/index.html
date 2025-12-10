@@ -7,6 +7,25 @@
     <meta name="theme-color" content="#66BB6A" />
     <meta name="description" content="The Dragon Keeper's Nutrition Tracker - Track your purines and nutrition with style" />
     <title>Purine Control 🐉</title>
+    <!-- GitHub Pages SPA redirect handler -->
+    <script type="text/javascript">
+      // Handle redirect from 404.html for GitHub Pages SPA
+      (function() {
+        var redirect = sessionStorage.getItem('spa-redirect');
+        if (redirect) {
+          sessionStorage.removeItem('spa-redirect');
+          try {
+            var stored = JSON.parse(redirect);
+            // Push the correct route to history so React Router picks it up
+            if (stored.path && stored.path !== window.location.pathname) {
+              window.history.replaceState(null, '', stored.path + (stored.search || '') + (stored.hash || ''));
+            }
+          } catch (e) {
+            console.error('Failed to parse SPA redirect:', e);
+          }
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

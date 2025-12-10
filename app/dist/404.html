@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Purine Control - Redirecting...</title>
+  <script type="text/javascript">
+    // Single Page Apps for GitHub Pages redirect script
+    // https://github.com/rafgraph/spa-github-pages
+    // This script handles 404 errors for GitHub Pages SPA routing
+    
+    // Preserve the path and redirect to index.html
+    var pathSegmentsToKeep = 1; // Keep '/purine-control' segment
+    
+    var locationPath = window.location.pathname;
+    var locationSearch = window.location.search;
+    var locationHash = window.location.hash;
+    
+    // Store the intended route in sessionStorage
+    sessionStorage.setItem('spa-redirect', JSON.stringify({
+      path: locationPath,
+      search: locationSearch,
+      hash: locationHash
+    }));
+    
+    // Redirect to the root of the app
+    var basePath = locationPath.split('/').slice(0, 1 + pathSegmentsToKeep).join('/');
+    window.location.replace(basePath + '/');
+  </script>
+</head>
+<body>
+  <p>Redirecting...</p>
+</body>
+</html>

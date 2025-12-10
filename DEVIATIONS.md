@@ -284,23 +284,25 @@ These items need decisions before development can proceed:
 
 ## Current Implementation Status
 
-> ✅ **UPDATED ASSESSMENT (Dec 2, 2025):** Core intelligence layer is now complete. AI parsing, ingredient caching, local recalculation, and image analysis all working.
+> ✅ **UPDATED ASSESSMENT (Dec 10, 2025):** Core app is feature-complete for MVP. AI parsing, ingredient management, charts, and settings all working. Missing: Authentication, Oracle recommendations.
 
-### What We Have: Full Meal Diary with AI Intelligence
+### What We Have: Full Meal Diary with AI Intelligence + Ingredient Management
 
-The app now has a complete meal logging experience with AI-powered analysis:
+The app now has complete meal logging with AI analysis and a full ingredient management system:
 
 | Layer | Status | Notes |
 |-------|--------|-------|
 | **UI Components** | ✅ Done | All pages functional |
-| **Database Connection** | ✅ Done | InstantDB working |
+| **Database Connection** | ✅ Done | InstantDB working with proper UUIDs |
 | **Basic CRUD** | ✅ Done | Meals, hydration, stash |
-| **AI Parsing** | ✅ Done | Text + Image analysis via Gemini |
+| **AI Parsing** | ✅ Done | Text + Image analysis via Gemini (Spanish) |
 | **Ingredient Cache** | ✅ Done | Reduces AI calls on repeat ingredients |
+| **Ingredient Manager** | ✅ Done | Edit, delete, merge, propagate to meals |
 | **Local Recalc** | ✅ Done | Edit quantities without AI |
 | **Image Processing** | ✅ Done | Camera, gallery, OCR, food ID |
 | **Charts** | ✅ Done | Recharts LineChart with filters |
 | **Data Export** | ✅ Done | CSV export from Charts |
+| **Stats** | ✅ Done | Live computed from meals DB |
 | **Authentication** | ❌ None | Hardcoded `local-user` |
 | **Oracle** | ❌ Shell | AI recommendations not wired |
 
@@ -314,33 +316,36 @@ The app now has a complete meal logging experience with AI-powered analysis:
 | EmberMascot component | State-based CSS animations |
 | Calendar ribbon | Week view with navigation |
 | Meal type selector | 4 buttons |
-| Meal cards display | Sorted by type |
+| Meal cards display | Sorted by type, edit/copy/delete/stash |
 | Daily status panel | 9 nutrient progress bars |
-| Settings form | All profile fields |
+| Settings form | All profile fields + Ingredient Manager |
 | Stash page | 2 tabs with CRUD |
+| Charts page | Line charts, date ranges, CSV export |
 
 ### ✅ Database Layer Complete
 | Feature | Notes |
 |---------|-------|
-| InstantDB connection | Hooks working |
+| InstantDB connection | Hooks working with UUID IDs |
 | User persistence | Profile saves/loads |
 | Meals CRUD | Add/edit/delete working |
 | Hydration tracking | Single record per day |
 | Stash items | Meals + bottles |
 | Theme persistence | Saves to user record |
+| Ingredient Library | Cache with proper UUIDs, backfill from meals |
 
 ### ✅ Intelligence Layer Complete
 | Feature | PDD Section | Current State |
 |---------|-------------|---------------|
-| **AI Meal Parsing** | 5.1 Prompt 1 | ✅ `parseMealWithNutrition()` - text + images |
+| **AI Meal Parsing** | 5.1 Prompt 1 | ✅ `parseMealWithNutrition()` - text + images, Spanish |
 | **Ingredient Extraction** | 5.1 | ✅ Full ingredients array with nutrients |
 | **Nutrition Lookup** | 5.1 Prompt 2 | ✅ `getNutritionForIngredient()` for cache misses |
 | **Ingredient Library** | 3.2, 4.2 | ✅ `useIngredientLibrary()` hook + cache |
 | **Cache Lookups** | 4.2 | ✅ `normalizeIngredientName()` + `lookupIngredient()` |
 | **Local Recalculation** | 4.3 | ✅ `recalculateIngredient()` + UI integration |
-| **Unit Conversion** | 4.2 | ✅ `convertToGrams()` with AI-specific weights |
+| **Unit Conversion** | 4.2 | ✅ AI-provided `grams` field for each ingredient |
 | **Image Analysis** | 5.2 | ✅ Camera + gallery + Gemini Vision |
 | **Charts/Visualization** | 6.2 | ✅ Recharts LineChart with all features |
+| **Ingredient Manager** | N/A (new) | ✅ Edit, merge, delete, propagate to meals |
 | **Recommendations** | 5.1 Prompt 4 | ❌ Oracle page still shell |
 
 ### ❌ Account Layer Missing
@@ -403,7 +408,130 @@ The app now has a complete meal logging experience with AI-powered analysis:
 | 1.3 | Nov 26, 2025 | Correction | **Honest reassessment** - phases were incorrectly marked complete. UI layer done, intelligence layer missing. |
 | 1.4 | Dec 2, 2025 | Milestone | **Intelligence layer complete!** AI parsing, ingredient cache, local recalculation, image analysis all working. |
 | 1.5 | Dec 2, 2025 | Feature | **Charts page complete!** Recharts integration, date ranges, grouping, nutrient toggles, CSV export. Fixed ingredient weight estimation bug (DEV-012). |
+| 1.6 | Dec 10, 2025 | Feature | **Ingredient Manager complete!** Edit/merge/delete cached ingredients, propagate changes to meals. Stats fixed. Multiple bug fixes. |
+| 1.7 | Dec 10, 2025 | Feature | **UX improvements:** Meal input autocomplete, AI re-analyze button, 404 fix for GitHub Pages SPA routing. |
+
+---
+
+### DEV-013: Stats Counter Simplification
+
+| Field | Value |
+|-------|-------|
+| **Date** | December 3, 2025 |
+| **Section** | Data Architecture, UI |
+| **Original Spec** | User stats stored as counters in user record (`total_meals_logged`, `current_streak_days`) |
+| **New Decision** | Stats calculated dynamically from meals collection queries |
+| **Rationale** | Stored counters became out of sync with actual data (showed 0 or wrong values). Querying the actual meals ensures accuracy and handles deletions correctly. |
+| **Impact** | - `useAllMeals()` hook queries all meals to compute stats<br>- `totalMeals` = count of all meals<br>- `calculateStreak()` computes streak from meal dates<br>- No more stale counter bugs |
+
+**Files Affected:** `app/src/hooks/useData.js`, `app/src/pages/Settings/Settings.jsx`
+
+---
+
+### DEV-014: Ingredient Library with InstantDB UUIDs
+
+| Field | Value |
+|-------|-------|
+| **Date** | December 3, 2025 |
+| **Section** | Data Architecture (Section 3.2) |
+| **Original Spec** | Ingredient cache using normalized name as record ID |
+| **New Decision** | Use `crypto.randomUUID()` for all ingredientLibrary records; `normalized_name` stored as field for lookups |
+| **Rationale** | InstantDB requires UUIDs for record IDs. Using `penne_pasta` as ID caused silent failures and empty ingredient cache. |
+| **Impact** | - All CRUD operations now use UUID-based IDs<br>- `addIngredient()`, `updateIngredient()`, `deleteIngredient()` look up by `normalized_name` then use `id`<br>- Backfill function generates UUIDs for each ingredient |
+
+**Files Affected:** `app/src/hooks/useData.js`, `app/src/contexts/UserContext.jsx`
+
+---
+
+### DEV-015: Ingredient Manager Feature
+
+| Field | Value |
+|-------|-------|
+| **Date** | December 3, 2025 |
+| **Section** | Screen Specifications (Settings) |
+| **Original Spec** | No ingredient management UI specified |
+| **New Decision** | Full Ingredient Manager modal in Settings with: view all cached ingredients, edit nutrients (per 100g), delete, merge duplicates, propagate changes to past meals |
+| **Rationale** | Users need to correct AI-estimated values and consolidate duplicate ingredients (e.g., same ingredient in different languages) |
+| **Impact** | - Settings page has "🧪 Ingredient Manager" button<br>- Edit modal with all 8 nutrient fields<br>- Propagate scope: none/week/month/all meals<br>- Merge mode: select 2+, pick primary, optionally average values<br>- Backfill on first open populates cache from existing meals |
+
+**Files Affected:** `app/src/pages/Settings/Settings.jsx`, `app/src/pages/Settings/Settings.css`, `app/src/hooks/useData.js`
+
+---
+
+### DEV-016: Spanish Language Default for AI
+
+| Field | Value |
+|-------|-------|
+| **Date** | December 3, 2025 |
+| **Section** | AI Integration (Section 5.1) |
+| **Original Spec** | AI returns ingredient names in same language as input |
+| **New Decision** | AI always returns ingredient names in Spanish |
+| **Rationale** | User's primary language is Spanish; prevents duplicate ingredients in different languages (e.g., "Chicken" vs "Pollo") |
+| **Impact** | - All prompts include: "IMPORTANT: Always return ingredient names in SPANISH"<br>- New meals will have Spanish ingredient names<br>- Merge feature helps consolidate existing English entries |
+
+**Files Affected:** `app/src/lib/gemini.js`
+
+---
+
+### DEV-017: Propagation Bug Fix - Grams Field
+
+| Field | Value |
+|-------|-------|
+| **Date** | December 4, 2025 |
+| **Section** | Nutrition Logic (Section 4.3) |
+| **Original Spec** | `propagateToMeals()` should recalculate nutrients based on ingredient weight |
+| **Bug Found** | Code used `ing.quantity_g` which doesn't exist; AI stores weight in `ing.grams`. This caused all propagations to default to 100g. |
+| **Fix** | Changed to `ing.grams || ing.quantity_g || 100` and also update `nutrients_per_100g` in the meal's ingredient entry |
+| **Impact** | - Propagation now correctly uses actual gram weights<br>- Per-100g reference values are updated in meals<br>- Meal totals recalculated properly |
+
+**Files Affected:** `app/src/hooks/useData.js`
+
+---
+
+### DEV-018: Meal Input Autocomplete/Search
+
+| Field | Value |
+|-------|-------|
+| **Date** | December 10, 2025 |
+| **Section** | Screen Specifications (6.1 Diary) |
+| **Original Spec** | Simple text input for meal description |
+| **New Decision** | Input now shows autocomplete suggestions from: saved meals (stash), historical meals, cached ingredients |
+| **Rationale** | Faster meal logging for repeat items; reduces AI calls; better UX for logging familiar foods |
+| **Impact** | - Type 2+ characters to see suggestions<br>- Arrow keys + Enter for keyboard navigation<br>- Selecting a stashed/historical meal logs it directly<br>- Selecting an ingredient fills the input field |
+
+**Files Affected:** `app/src/pages/Diary/Diary.jsx`, `app/src/pages/Diary/Diary.css`
+
+---
+
+### DEV-019: AI Re-analyze Button on Meal Cards
+
+| Field | Value |
+|-------|-------|
+| **Date** | December 10, 2025 |
+| **Section** | Screen Specifications (6.1 Diary) |
+| **Original Spec** | Meal cards only had Edit, Copy, Delete, Stash actions |
+| **New Decision** | Added "🔄 AI" button to re-analyze meal nutrients using Gemini |
+| **Rationale** | Users may want to refresh nutrient data after ingredient library improvements; allows AI to re-estimate using updated knowledge |
+| **Impact** | - Shows confirmation dialog before re-analyzing<br>- Uses original meal description for AI input<br>- Updates ingredients and totals with new AI analysis<br>- Marks meal with `analysis_method: 'ai-reanalyzed'` |
+
+**Files Affected:** `app/src/pages/Diary/Diary.jsx`
+
+---
+
+### DEV-020: GitHub Pages SPA 404 Fix
+
+| Field | Value |
+|-------|-------|
+| **Date** | December 10, 2025 |
+| **Section** | Infrastructure |
+| **Original Spec** | Standard BrowserRouter with basename, no 404 handling |
+| **Bug Found** | Directly navigating to `/purine-control/charts` or refreshing on subpages returned 404 because GitHub Pages tries to serve actual files |
+| **Fix** | Created `404.html` that captures the intended path and redirects to `index.html` with path preserved via sessionStorage |
+| **Impact** | - `public/404.html` captures path and redirects<br>- `index.html` script restores path via `history.replaceState`<br>- React Router then handles the correct route |
+
+**Files Affected:** `app/public/404.html`, `app/index.html`
 
 ---
 
 *Keep this document updated throughout development. Every significant deviation should be logged for future reference and documentation.*
+
